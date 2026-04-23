@@ -1,0 +1,10 @@
+{
+  "supplier_name": "Zhejiang Borealis New Materials",
+  "origin_port_or_country": "Ningbo",
+  "incoterm": "FOB",
+  "unit_price": 8350.0,
+  "currency": "CNY",
+  "moq": 60,
+  "lead_time_days": 40,
+  "payment_terms": "T/T 30 days"
+}

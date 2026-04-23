@@ -1,36 +1,68 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================================
+# LintasNiaga monorepo — .gitignore
+# ============================================================
 
-# dependencies
-/node_modules
-/.pnp
+# Node / pnpm — match at ANY depth (no leading slash)
+node_modules/
+.pnp
 .pnp.js
+pnpm-debug.log*
 
-# testing
-/coverage
+# Python virtualenvs — match at ANY depth
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
 
-# next.js
-/.next/
-/out/
+# Next.js
+.next/
+out/
 
-# production
-/build
+# Test / coverage
+coverage/
+.pytest_cache/
+htmlcov/
 
-# misc
+# Build artefacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files — NEVER commit secrets
+.env
+.env.*
+!.env.example
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Editor
+.vercel
 *.pem
 
-# debug
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
-.env
+# Broken / temp scaffolding directories
+apps/web-broken-*/
 
-# vercel
-.vercel
+# Stitch design export (frontend design only)
+stitch_lintasniaga_procurement_copilot/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Data — snapshots and raw are runtime artefacts, don't commit them
+data/snapshots/
+data/raw/
+data/tmp/
+
+# Uploads directory (runtime)
+apps/api/uploads/
+
+# SQLite database (runtime)
+*.db
+*.db-shm
+*.db-wal

@@ -1,0 +1,7 @@
+[
+  {"supplier_name": "Ningbo Precision Plastics Co. Ltd.", "country_code": "CN", "port": "Ningbo", "reliability_score": 0.82, "typical_lead_days": 35, "notes": "Tier-2 general purpose PP supplier"},
+  {"supplier_name": "Sinopec Trading (Shenzhen)", "country_code": "CN", "port": "Shenzhen", "reliability_score": 0.91, "typical_lead_days": 30, "notes": "Major petrochemical group subsidiary"},
+  {"supplier_name": "Thai Polyethylene Co. Ltd.", "country_code": "TH", "port": "Bangkok", "reliability_score": 0.88, "typical_lead_days": 18, "notes": "Regional ASEAN PP supplier"},
+  {"supplier_name": "PT Chandra Asri Petrochemical", "country_code": "ID", "port": "Jakarta", "reliability_score": 0.75, "typical_lead_days": 22, "notes": "Indonesian petrochemical manufacturer"},
+  {"supplier_name": "Zhejiang Borealis New Materials", "country_code": "CN", "port": "Ningbo", "reliability_score": 0.79, "typical_lead_days": 40, "notes": "Smaller PP resin specialist"}
+]

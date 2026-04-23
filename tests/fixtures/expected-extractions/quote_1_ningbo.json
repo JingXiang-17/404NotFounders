@@ -1,0 +1,10 @@
+{
+  "supplier_name": "Ningbo Precision Plastics Co. Ltd.",
+  "origin_port_or_country": "Ningbo",
+  "incoterm": "FOB",
+  "unit_price": 1180.0,
+  "currency": "USD",
+  "moq": 80,
+  "lead_time_days": 35,
+  "payment_terms": "T/T 30 days"
+}

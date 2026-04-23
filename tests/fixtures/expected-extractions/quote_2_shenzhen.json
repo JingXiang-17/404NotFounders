@@ -1,0 +1,10 @@
+{
+  "supplier_name": "Sinopec Trading",
+  "origin_port_or_country": "Shenzhen",
+  "incoterm": "FOB",
+  "unit_price": 1145.0,
+  "currency": "USD",
+  "moq": 120,
+  "lead_time_days": 30,
+  "payment_terms": "T/T 60 days"
+}

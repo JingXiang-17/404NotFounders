@@ -1,0 +1,10 @@
+{
+  "supplier_name": "PT Chandra Asri",
+  "origin_port_or_country": "Jakarta",
+  "incoterm": "FOB",
+  "unit_price": 1095.0,
+  "currency": "USD",
+  "moq": 100,
+  "lead_time_days": 22,
+  "payment_terms": "T/T 45 days"
+}
