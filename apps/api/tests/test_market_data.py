@@ -1,4 +1,5 @@
 from pathlib import Path
+import asyncio
 
 import pandas as pd
 import pytest
@@ -41,8 +42,7 @@ def test_normalize_history_frame_handles_multiindex_columns():
     }
 
 
-@pytest.mark.asyncio
-async def test_refresh_fx_snapshot_writes_envelope(monkeypatch):
+def test_refresh_fx_snapshot_writes_envelope(monkeypatch):
     fixture_frame = _fixture_frame()
     written_snapshots: dict[str, SnapshotEnvelope] = {}
 
@@ -58,7 +58,7 @@ async def test_refresh_fx_snapshot_writes_envelope(monkeypatch):
     monkeypatch.setattr(market_data_service, "fetch_fx_history", fake_fetch_fx_history)
     monkeypatch.setattr(market_data_service, "SnapshotRepository", FakeSnapshotRepository)
 
-    envelope = await market_data_service.refresh_fx_snapshot("USDMYR")
+    envelope = asyncio.run(market_data_service.refresh_fx_snapshot("USDMYR"))
 
     assert envelope.dataset == "fx/USDMYR"
     assert envelope.source == "yfinance"
@@ -68,8 +68,7 @@ async def test_refresh_fx_snapshot_writes_envelope(monkeypatch):
     assert written_snapshots["fx/USDMYR"].record_count == 3
 
 
-@pytest.mark.asyncio
-async def test_refresh_energy_snapshot_writes_envelope(monkeypatch):
+def test_refresh_energy_snapshot_writes_envelope(monkeypatch):
     fixture_frame = _fixture_frame()
     written_snapshots: dict[str, SnapshotEnvelope] = {}
 
@@ -85,7 +84,7 @@ async def test_refresh_energy_snapshot_writes_envelope(monkeypatch):
     monkeypatch.setattr(market_data_service, "fetch_energy_history", fake_fetch_energy_history)
     monkeypatch.setattr(market_data_service, "SnapshotRepository", FakeSnapshotRepository)
 
-    envelope = await market_data_service.refresh_energy_snapshot("BZ=F")
+    envelope = asyncio.run(market_data_service.refresh_energy_snapshot("BZ=F"))
 
     assert envelope.dataset == "energy/BZ=F"
     assert envelope.record_count == 3
@@ -117,3 +116,5 @@ def test_ingest_market_fx_route(monkeypatch):
     payload = response.json()
     assert payload["dataset"] == "fx/USDMYR"
     assert payload["record_count"] == 3
+    assert payload["status"] == "success"
+    assert "data" not in payload

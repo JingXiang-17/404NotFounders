@@ -1,0 +1,144 @@
+import json
+import logging
+from typing import Any, AsyncGenerator, Dict, TypedDict
+
+from langchain_core.messages import HumanMessage, SystemMessage
+
+try:
+    from langgraph.graph import END, StateGraph
+except ImportError:
+    StateGraph = None
+    END = None
+
+from app.providers.llm_provider import build_llm_provider
+
+logger = logging.getLogger(__name__)
+
+COMPARISON_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You have been given ranked supplier quotes with full cost breakdowns, FX simulation results, and market context. Your job is to:
+1. Confirm or adjust the winner (you may only swap rank #1 and #2, and only for: reliability, downside risk, MOQ lock-up, urgency mismatch, or disruption risk)
+2. Recommend timing: lock_now or wait
+3. Recommend hedge ratio (0-100)
+4. Give top 3 reasons for your recommendation
+5. Add one caveat only if there is a material risk
+6. Explain why each non-winning supplier was not chosen (one sentence each)
+7. Provide a brief impact summary.
+Respond in strict JSON format matching:
+{
+  "recommended_quote_id": "uuid",
+  "timing": "lock_now | wait",
+  "hedge_ratio": 70,
+  "top_3_reasons": ["reason1", "reason2", "reason3"],
+  "caveat": "caveat or null",
+  "backup_quote_id": "uuid",
+  "backup_rationale": "reason",
+  "why_not_others": {"uuid1": "reason", "uuid2": "reason"},
+  "impact_summary": "summary"
+}
+"""
+
+SINGLE_QUOTE_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You are evaluating a single supplier quote, not comparing multiple suppliers.
+Your job is to:
+1. Evaluate the quote as proceed, review_carefully, or do_not_recommend
+2. Recommend timing: lock_now or wait
+3. Recommend hedge ratio (0-100)
+4. Give top 3 reasons for your recommendation
+5. Add one caveat only if there is a material risk
+6. Explain the main downside risk in one sentence
+7. Provide a brief impact summary
+Respond in strict JSON format matching:
+{
+  "recommended_quote_id": "uuid",
+  "evaluation_label": "proceed | review_carefully | do_not_recommend",
+  "timing": "lock_now | wait",
+  "hedge_ratio": 50,
+  "top_3_reasons": ["reason1", "reason2", "reason3"],
+  "caveat": "caveat or null",
+  "backup_quote_id": null,
+  "backup_rationale": null,
+  "why_not_others": {},
+  "impact_summary": "summary"
+}
+"""
+
+
+class OrchestratorState(TypedDict):
+    context_str: str
+    system_prompt: str
+    ai_json_output: Dict[str, Any]
+    messages: list[Any]
+
+
+async def node_reason_recommendation(state: OrchestratorState) -> OrchestratorState:
+    logger.info("Executing AI reasoning node")
+    provider = build_llm_provider()
+    
+    messages = [
+        SystemMessage(content=state["system_prompt"]),
+        HumanMessage(content=state["context_str"]),
+    ]
+    
+    # We use invoke with thinking enabled, requesting JSON via the provider.
+    # LLMProvider sets up the Langfuse callback implicitly.
+    try:
+        # We need to tell the model to return JSON.
+        response = provider.client.invoke(
+            messages,
+            config={"callbacks": provider._callbacks()},
+            # GLM-5.1 supports thinking, we can pass it if supported by the client.
+            # extra_body={"thinking": {"type": "enabled"}}
+        )
+        content = response.content if isinstance(response.content, str) else str(response.content)
+        parsed_json = provider._clean_json(content)
+        state["ai_json_output"] = parsed_json
+    except Exception as exc:
+        logger.error(f"Reasoning node failed: {exc}")
+        state["ai_json_output"] = {}
+        
+    return state
+
+
+def build_ai_graph() -> Any:
+    if StateGraph is None:
+        raise RuntimeError("langgraph is not installed")
+        
+    workflow = StateGraph(OrchestratorState)
+    workflow.add_node("reason_recommendation", node_reason_recommendation)
+    workflow.set_entry_point("reason_recommendation")
+    workflow.add_edge("reason_recommendation", END)
+    
+    return workflow.compile()
+
+
+def get_reasoning_system_prompt(*, single_quote_mode: bool) -> str:
+    return SINGLE_QUOTE_SYSTEM_PROMPT if single_quote_mode else COMPARISON_SYSTEM_PROMPT
+
+
+async def stream_analyst_explanation(context_str: str) -> AsyncGenerator[str, None]:
+    """
+    Stream the explanation for the SSE endpoint.
+    Returns markdown explanation.
+    """
+    provider = build_llm_provider()
+    messages = [
+        SystemMessage(content="You are LintasNiaga's procurement analyst. Summarize the procurement recommendation based on the context in 2-3 clear paragraphs for the user."),
+        HumanMessage(content=context_str),
+    ]
+    
+    try:
+        async for chunk in provider.client.astream(
+            messages,
+            config={"callbacks": provider._callbacks()},
+        ):
+            # Also yield thinking tokens if present in additional_kwargs
+            reasoning = chunk.additional_kwargs.get("reasoning_content", "")
+            if reasoning:
+                # We can format reasoning differently if needed, or just yield it
+                # For simplicity, we just yield content. If you want to yield reasoning, you can wrap it in SSE tags.
+                pass
+                
+            content = chunk.content
+            if content:
+                yield content
+    except Exception as exc:
+        logger.error(f"Streaming failed: {exc}")
+        yield f"Error generating explanation: {str(exc)}"

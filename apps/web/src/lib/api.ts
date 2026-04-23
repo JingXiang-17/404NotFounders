@@ -17,6 +17,7 @@ export async function fetchApi<T>(
 
   const response = await fetch(url, {
     ...options,
+    cache: "no-store",
     headers: {
       ...defaultHeaders,
       ...options.headers,
@@ -24,7 +25,16 @@ export async function fetchApi<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}`);
+    let message = `API request failed with status ${response.status}`;
+    try {
+      const payload = await response.json();
+      if (typeof payload?.detail === "string" && payload.detail) {
+        message = payload.detail;
+      }
+    } catch {
+      // Fall back to default message.
+    }
+    throw new Error(message);
   }
 
   return response.json();
