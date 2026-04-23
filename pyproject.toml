@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lintasniaga-ingestion"
+version = "0.1.0"
+description = "Ingestion and scraping foundation for the LintasNiaga hackathon build."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "holidays>=0.47",
+]
+
+[project.optional-dependencies]
+ingestion = [
+  "yfinance>=0.2.54",
+  "trafilatura>=1.12.0",
+]
+dev = [
+  "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.setuptools]
+package-dir = {"" = "apps/api"}
+
+[tool.setuptools.packages.find]
+where = ["apps/api"]
+include = ["app*"]

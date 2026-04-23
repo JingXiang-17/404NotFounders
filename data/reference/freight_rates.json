@@ -1,6 +1,50 @@
 [
-  {"origin_country": "CN", "origin_port": "Ningbo", "destination_port": "MYPKG", "incoterm": "FOB", "currency": "USD", "rate_value": 420.0, "rate_unit": "container", "valid_from": "2026-01-01", "valid_to": "2026-12-31", "source_note": "Flexport Q1 2026 benchmark estimate"},
-  {"origin_country": "CN", "origin_port": "Shenzhen", "destination_port": "MYPKG", "incoterm": "FOB", "currency": "USD", "rate_value": 380.0, "rate_unit": "container", "valid_from": "2026-01-01", "valid_to": "2026-12-31", "source_note": "Flexport Q1 2026 benchmark estimate"},
-  {"origin_country": "TH", "origin_port": "Bangkok", "destination_port": "MYPKG", "incoterm": "FOB", "currency": "USD", "rate_value": 180.0, "rate_unit": "container", "valid_from": "2026-01-01", "valid_to": "2026-12-31", "source_note": "Freightos Q1 2026 benchmark estimate"},
-  {"origin_country": "ID", "origin_port": "Jakarta", "destination_port": "MYPKG", "incoterm": "FOB", "currency": "USD", "rate_value": 210.0, "rate_unit": "container", "valid_from": "2026-01-01", "valid_to": "2026-12-31", "source_note": "Freightos Q1 2026 benchmark estimate"}
+  {
+    "origin_country": "CN",
+    "origin_port": "CNNGB",
+    "destination_port": "MYPKG",
+    "incoterm": "FOB",
+    "currency": "USD",
+    "rate_value": 82.0,
+    "rate_unit": "mt",
+    "valid_from": "2026-04-01",
+    "valid_to": "2026-06-30",
+    "source_note": "Curated hackathon baseline for Ningbo to Port Klang."
+  },
+  {
+    "origin_country": "CN",
+    "origin_port": "CNSZX",
+    "destination_port": "MYPKG",
+    "incoterm": "FOB",
+    "currency": "USD",
+    "rate_value": 88.0,
+    "rate_unit": "mt",
+    "valid_from": "2026-04-01",
+    "valid_to": "2026-06-30",
+    "source_note": "Curated hackathon baseline for Shenzhen to Port Klang."
+  },
+  {
+    "origin_country": "TH",
+    "origin_port": "THBKK",
+    "destination_port": "MYPKG",
+    "incoterm": "FOB",
+    "currency": "USD",
+    "rate_value": 51.0,
+    "rate_unit": "mt",
+    "valid_from": "2026-04-01",
+    "valid_to": "2026-06-30",
+    "source_note": "Curated hackathon baseline for Bangkok to Port Klang."
+  },
+  {
+    "origin_country": "ID",
+    "origin_port": "IDJKT",
+    "destination_port": "MYPKG",
+    "incoterm": "FOB",
+    "currency": "USD",
+    "rate_value": 46.0,
+    "rate_unit": "mt",
+    "valid_from": "2026-04-01",
+    "valid_to": "2026-06-30",
+    "source_note": "Curated hackathon baseline for Jakarta to Port Klang."
+  }
 ]

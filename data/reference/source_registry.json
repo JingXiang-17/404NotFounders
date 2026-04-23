@@ -1,0 +1,25 @@
+[
+  {
+    "source_name": "ChemAnalyst",
+    "url": "https://www.chemanalyst.com/Petro-Chemicals/polypropylene-pp-15",
+    "domain": "chemanalyst.com",
+    "expected_region": "Asia",
+    "expected_content_type": "market-commentary",
+    "language": "en",
+    "priority": 1,
+    "notes": "Curated starting point for PP market commentary and benchmark extraction.",
+    "enabled": true
+  },
+  {
+    "source_name": "ChemOrbis",
+    "url": "https://www.chemorbis.com/en/polypropylene-pp-prices",
+    "domain": "chemorbis.com",
+    "expected_region": "Asia",
+    "expected_content_type": "market-commentary",
+    "language": "en",
+    "priority": 2,
+    "notes": "Secondary source for PP pricing pages. Keep disabled until extraction quality is confirmed.",
+    "enabled": false
+  }
+]
+

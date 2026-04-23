@@ -1,36 +1,62 @@
 class LintasNiagaException(Exception):
-    """Base exception for LintasNiaga"""
+    """Base exception for LintasNiaga."""
+
+
+class IngestionError(LintasNiagaException):
+    """Base class for ingestion and snapshot failures."""
+
+
+class ExtractionFailed(IngestionError):
     pass
 
-class ExtractionFailed(LintasNiagaException):
+
+class ValidationFailed(IngestionError):
     pass
 
-class ValidationFailed(LintasNiagaException):
+
+class ValidationError(ValidationFailed):
+    """Raised when local data violates a contract."""
+
+
+class UnsupportedScope(IngestionError):
     pass
 
-class UnsupportedScope(LintasNiagaException):
+
+class ExternalFetchFailed(IngestionError):
     pass
 
-class ExternalFetchFailed(LintasNiagaException):
+
+class ProviderError(ExternalFetchFailed):
+    """Raised when an upstream provider fails."""
+
+
+class DependencyNotAvailableError(IngestionError):
+    """Raised when an optional runtime dependency is missing."""
+
+
+class NormalizationFailed(IngestionError):
     pass
 
-class NormalizationFailed(LintasNiagaException):
+
+class SnapshotWriteFailed(IngestionError):
     pass
 
-class SnapshotWriteFailed(LintasNiagaException):
+
+class SnapshotStaleUsingLastValid(IngestionError):
     pass
 
-class SnapshotStaleUsingLastValid(LintasNiagaException):
+
+class NoValidQuotes(IngestionError):
     pass
 
-class NoValidQuotes(LintasNiagaException):
+
+class SingleValidQuoteFallback(IngestionError):
     pass
 
-class SingleValidQuoteFallback(LintasNiagaException):
+
+class ComputationFailed(IngestionError):
     pass
 
-class ComputationFailed(LintasNiagaException):
-    pass
 
-class AIReasoningFailedFallbackToDeterministic(LintasNiagaException):
+class AIReasoningFailedFallbackToDeterministic(IngestionError):
     pass

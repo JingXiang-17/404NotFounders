@@ -1,5 +1,10 @@
 [
-  {"hs_code": "3902.10", "product_name": "PP Resin (Polypropylene)", "import_country": "MY", "tariff_rate_pct": 5.0, "tariff_type": "MFN", "source_note": "Malaysia Royal Customs 2026 MFN schedule"},
-  {"hs_code": "3901.10", "product_name": "LDPE (Low Density Polyethylene)", "import_country": "MY", "tariff_rate_pct": 5.0, "tariff_type": "MFN", "source_note": "Malaysia Royal Customs 2026 MFN schedule"},
-  {"hs_code": "3904.10", "product_name": "PVC (Polyvinyl Chloride)", "import_country": "MY", "tariff_rate_pct": 5.0, "tariff_type": "MFN", "source_note": "Malaysia Royal Customs 2026 MFN schedule"}
+  {
+    "hs_code": "3902.10",
+    "product_name": "PP Resin",
+    "import_country": "MY",
+    "tariff_rate_pct": 5.0,
+    "tariff_type": "MFN",
+    "source_note": "Hackathon baseline tariff assumption for Malaysian import of PP Resin."
+  }
 ]

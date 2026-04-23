@@ -1,7 +1,42 @@
 [
-  {"port_code": "MYPKG", "port_name": "Port Klang", "country_code": "MY", "latitude": 3.0, "longitude": 101.4, "is_destination_hub": true},
-  {"port_code": "CNNGB", "port_name": "Ningbo", "country_code": "CN", "latitude": 29.87, "longitude": 121.55, "is_destination_hub": false},
-  {"port_code": "CNSZX", "port_name": "Shenzhen (Yantian)", "country_code": "CN", "latitude": 22.57, "longitude": 114.27, "is_destination_hub": false},
-  {"port_code": "THBKK", "port_name": "Laem Chabang (Bangkok)", "country_code": "TH", "latitude": 13.08, "longitude": 100.88, "is_destination_hub": false},
-  {"port_code": "IDJKT", "port_name": "Tanjung Priok (Jakarta)", "country_code": "ID", "latitude": -6.1, "longitude": 106.88, "is_destination_hub": false}
+  {
+    "port_code": "MYPKG",
+    "port_name": "Port Klang",
+    "country_code": "MY",
+    "latitude": 3.0019,
+    "longitude": 101.3999,
+    "is_destination_hub": true
+  },
+  {
+    "port_code": "CNNGB",
+    "port_name": "Ningbo",
+    "country_code": "CN",
+    "latitude": 29.8683,
+    "longitude": 121.544,
+    "is_destination_hub": false
+  },
+  {
+    "port_code": "CNSZX",
+    "port_name": "Shenzhen",
+    "country_code": "CN",
+    "latitude": 22.5431,
+    "longitude": 114.0579,
+    "is_destination_hub": false
+  },
+  {
+    "port_code": "THBKK",
+    "port_name": "Bangkok",
+    "country_code": "TH",
+    "latitude": 13.7563,
+    "longitude": 100.5018,
+    "is_destination_hub": false
+  },
+  {
+    "port_code": "IDJKT",
+    "port_name": "Jakarta",
+    "country_code": "ID",
+    "latitude": -6.2088,
+    "longitude": 106.8456,
+    "is_destination_hub": false
+  }
 ]
