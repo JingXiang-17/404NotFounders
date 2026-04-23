@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from app.api.routes import health, ingest_holidays, ingest_market, ingest_reference, quote_upload
+from app.api.routes import analysis, health, ingest_holidays, ingest_market, ingest_reference, quote_upload, snapshots
 from app.core.logging import setup_logging
 
 setup_logging()
@@ -29,3 +29,5 @@ app.include_router(ingest_market.router)
 app.include_router(ingest_reference.router)
 app.include_router(ingest_holidays.router)
 app.include_router(quote_upload.router)
+app.include_router(analysis.router)
+app.include_router(snapshots.router)

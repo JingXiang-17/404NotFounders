@@ -4,13 +4,32 @@
   --color-background: #06060A;
   --color-foreground: #F0F0F5;
   --color-surface: #111116;
+  --color-surface-low: #0c0e12;
+  --color-surface-elevated: #16161E;
+  --color-surface-strong: #333539;
   --color-border: #1A1A24;
   --color-primary: #0DFFD6;
   --color-secondary-text: #8888A0;
+  --color-warning: #FFD600;
+  --color-success-glow: rgba(13, 255, 214, 0.2);
+}
+
+html {
+  background-color: var(--color-background);
 }
 
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: rgba(13, 255, 214, 0.18);
+  color: var(--color-foreground);
 }

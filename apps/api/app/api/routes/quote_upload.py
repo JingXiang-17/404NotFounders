@@ -27,7 +27,11 @@ if MULTIPART_AVAILABLE:
         try:
             upload = await process_upload(file)
         except (DependencyNotAvailableError, ExtractionFailed, ProviderError) as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            filename = file.filename or "uploaded file"
+            raise HTTPException(
+                status_code=502,
+                detail=f"Extraction failed for {filename} — please re-upload or enter manually. {str(exc)}",
+            ) from exc
 
         quote_state = get_quote_state_by_upload_id(upload.upload_id)
         if quote_state is None:
