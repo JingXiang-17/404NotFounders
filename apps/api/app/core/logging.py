@@ -17,6 +17,8 @@ class JSONFormatter(logging.Formatter):
 def setup_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     
     # Avoid duplicating handlers
     if not logger.handlers:

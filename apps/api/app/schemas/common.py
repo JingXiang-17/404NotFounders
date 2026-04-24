@@ -5,7 +5,7 @@ from typing import Any, List, Literal
 
 from pydantic import BaseModel
 
-from app.core.constants import DEFAULT_RESIN_SANE_PRICE_RANGE
+from app.core.constants import DEFAULT_RESIN_SANE_PRICE_RANGE, DEFAULT_RESIN_SANE_PRICE_RANGE_BY_CURRENCY
 from app.core.exceptions import ValidationError
 
 
@@ -150,13 +150,14 @@ def validate_resin_record(record: dict[str, Any]) -> None:
         "Resin record",
     )
     ensure_iso_date(record["date_reference"], "Resin date_reference")
-    if record["currency"] != "USD":
-        raise ValidationError("Resin currency must be USD")
-    if record["unit"] not in {"MT", "USD/MT"}:
-        raise ValidationError("Resin unit must be MT or USD/MT")
+    currency = str(record["currency"]).upper()
+    if currency not in {"USD", "CNY", "MYR"}:
+        raise ValidationError("Resin currency must be USD, CNY, or MYR")
+    if record["unit"] not in {"MT", "USD/MT", "CNY/MT", "MYR/MT"}:
+        raise ValidationError("Resin unit must be MT, USD/MT, CNY/MT, or MYR/MT")
     if not isinstance(record["price_value"], (int, float)):
         raise ValidationError("Resin price_value must be numeric")
-    low, high = DEFAULT_RESIN_SANE_PRICE_RANGE
+    low, high = DEFAULT_RESIN_SANE_PRICE_RANGE_BY_CURRENCY.get(currency, DEFAULT_RESIN_SANE_PRICE_RANGE)
     if not low <= float(record["price_value"]) <= high:
         raise ValidationError("Resin price_value is outside the accepted sanity range")
     if not isinstance(record["confidence"], (int, float)) or not 0 <= float(record["confidence"]) <= 1:

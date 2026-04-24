@@ -24,6 +24,20 @@ const LABEL_COPY: Record<string, string> = {
   do_not_recommend: "Do Not Recommend",
 };
 
+const MARKET_RISK_COPY: Record<string, string> = {
+  below_market: "Below market",
+  fair: "Fair vs market",
+  premium: "Premium",
+  high_premium: "High premium",
+};
+
+const MARKET_RISK_CLASS: Record<string, string> = {
+  below_market: "border-primary/40 text-primary",
+  fair: "border-border text-foreground",
+  premium: "border-[var(--color-warning)] text-[var(--color-warning)]",
+  high_premium: "border-[var(--color-warning)] bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
+};
+
 export function SupplierCard({
   rankedQuote,
   isRecommended,
@@ -35,6 +49,7 @@ export function SupplierCard({
   savingsVsNextBest = 0,
 }: SupplierCardProps) {
   const { quote, cost_result: cost, rank, delta_vs_winner } = rankedQuote;
+  const marketRisk = rankedQuote.market_price_risk;
   const cardClasses = isRecommended
     ? "border-2 border-primary bg-surface shadow-[0_0_20px_var(--color-success-glow)]"
     : "border border-border bg-[var(--color-surface-elevated)] opacity-90";
@@ -82,6 +97,21 @@ export function SupplierCard({
           <div className="flex flex-wrap gap-2 border-t border-border pt-2">
             {timingAdvice ? <Badge variant="outline" className="border-border text-foreground">Timing: <span className="ml-1 text-primary">{timingAdvice}</span></Badge> : null}
             {typeof hedgeRec === "number" ? <Badge variant="outline" className="border-border text-foreground">Hedge: <span className="ml-1 text-primary">{hedgeRec}%</span></Badge> : null}
+          </div>
+        ) : null}
+
+        {marketRisk ? (
+          <div className="rounded-lg border border-border bg-background/30 p-3 text-xs text-secondary-text">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="font-bold uppercase tracking-wider">PP resin benchmark</span>
+              <Badge variant="outline" className={MARKET_RISK_CLASS[marketRisk.risk_label]}>
+                {MARKET_RISK_COPY[marketRisk.risk_label]}
+              </Badge>
+            </div>
+            <div className="font-mono text-foreground">
+              {marketRisk.premium_pct >= 0 ? "+" : ""}
+              {marketRisk.premium_pct.toFixed(1)}% vs SunSirs CNY/MT benchmark
+            </div>
           </div>
         ) : null}
 

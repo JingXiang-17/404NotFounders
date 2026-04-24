@@ -73,12 +73,69 @@ export interface LandedCostResult {
   total_landed_p90: number;
 }
 
+export interface MarketPriceRisk {
+  quote_id: string;
+  quote_price_value: number;
+  quote_currency: string;
+  quote_price_myr_per_mt: number;
+  benchmark_price_value: number;
+  benchmark_currency: string;
+  benchmark_price_myr_per_mt: number;
+  premium_pct: number;
+  risk_label: "below_market" | "fair" | "premium" | "high_premium";
+  source_url: string;
+  as_of: string;
+}
+
+export interface ResinPriceScenario {
+  series_key: string;
+  source: string;
+  currency: string;
+  unit: string;
+  current_price: number;
+  as_of: string;
+  method: string;
+  p10_envelope: number[];
+  p50_envelope: number[];
+  p90_envelope: number[];
+  horizon_days: number;
+}
+
+export interface RiskDriverBreakdown {
+  tariff_rate: number;
+  freight_rate: number;
+  fx_currency: number;
+  oil_price: number;
+  weather_risk: number;
+  holidays: number;
+  macro_economy: number;
+  news_events: number;
+  pp_resin_benchmark: number;
+  notes: Record<string, string>;
+}
+
+export interface LandedCostScenario {
+  quote_id: string;
+  currency: string;
+  horizon_days: number;
+  hedge_ratio: number;
+  current_landed_cost: number;
+  p10_envelope: number[];
+  p50_envelope: number[];
+  p90_envelope: number[];
+  risk_width_envelope: number[];
+  p90_margin_wipeout_flag: boolean;
+  method: string;
+  as_of: string;
+}
+
 export interface RankedQuote {
   rank: number;
   delta_vs_winner: number;
   quote: ExtractedQuote;
   cost_result: LandedCostResult;
   reliability_score: number | null;
+  market_price_risk: MarketPriceRisk | null;
 }
 
 export interface BackupOption {
@@ -107,6 +164,28 @@ export interface HedgeScenarioResult {
   adjusted_p50: number;
   adjusted_p90: number;
   impact_vs_unhedged: number;
+  quote_id: string | null;
+  horizon_days: number;
+  p10_envelope: number[];
+  p50_envelope: number[];
+  p90_envelope: number[];
+  risk_width_envelope: number[];
+  p90_margin_wipeout_flag: boolean;
+  method: string;
+}
+
+export interface BankInstructionDraft {
+  title: string;
+  sme_name: string;
+  supplier_name: string;
+  target_currency: string;
+  amount: number;
+  tenor_days: number;
+  requested_strike_rate: number;
+  hedge_ratio: number;
+  business_justification: string;
+  risk_rationale: string;
+  generated_at: string;
 }
 
 export interface AnalysisRunResponse {
@@ -119,5 +198,12 @@ export interface AnalysisResultPayload {
   recommendation: RecommendationCard;
   ranked_quotes: RankedQuote[];
   fx_simulations: Record<string, FxSimulationResult>;
+  resin_benchmark: Record<string, unknown> | null;
+  market_price_risks: MarketPriceRisk[];
+  resin_price_scenario: ResinPriceScenario | null;
+  landed_cost_scenarios: Record<string, LandedCostScenario>;
+  selected_scenario: LandedCostScenario | null;
+  risk_driver_breakdown: RiskDriverBreakdown | null;
+  hedge_simulation: HedgeScenarioResult | null;
   trace_url: string | null;
 }

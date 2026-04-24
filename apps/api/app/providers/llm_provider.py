@@ -19,9 +19,12 @@ except ImportError:  # pragma: no cover - runtime dependency
     SystemMessage = None
 
 try:
-    from langfuse.callback import CallbackHandler
+    from langfuse import Langfuse, get_client
+    from langfuse.langchain import CallbackHandler
 except ImportError:  # pragma: no cover - runtime dependency
     CallbackHandler = None
+    get_client = None
+    Langfuse = None
 
 
 EXTRACTION_PROMPT = (
@@ -52,7 +55,18 @@ class GLMProvider:
         self.model_name = os.getenv("MODEL_NAME", "glm-5.1")
         self.langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
         self.langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-        self.langfuse_host = os.getenv("LANGFUSE_HOST")
+        self.langfuse_host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
+        self.langfuse_project_id = os.getenv("LANGFUSE_PROJECT_ID")
+        if self.langfuse_host and not os.getenv("LANGFUSE_BASE_URL"):
+            # Langfuse SDK v3/v4 uses LANGFUSE_BASE_URL; older docs/examples
+            # often used LANGFUSE_HOST. Keep the existing .env compatible.
+            os.environ["LANGFUSE_BASE_URL"] = self.langfuse_host
+        if Langfuse and self.langfuse_public_key and self.langfuse_secret_key and self.langfuse_host:
+            Langfuse(
+                public_key=self.langfuse_public_key,
+                secret_key=self.langfuse_secret_key,
+                base_url=self.langfuse_host,
+            )
 
         if ChatOpenAI is None or HumanMessage is None or SystemMessage is None:
             raise DependencyNotAvailableError(
@@ -66,7 +80,7 @@ class GLMProvider:
             openai_api_key=self.model_api_key,
             openai_api_base=self.model_base_url,
             temperature=0,
-            max_tokens=1000,
+            max_tokens=4000,
         )
 
     def _callbacks(self) -> list[Any]:
@@ -74,13 +88,31 @@ class GLMProvider:
             return []
         if not (self.langfuse_public_key and self.langfuse_secret_key and self.langfuse_host):
             return []
-        return [
-            CallbackHandler(
-                public_key=self.langfuse_public_key,
-                secret_key=self.langfuse_secret_key,
-                host=self.langfuse_host,
-            )
-        ]
+        return [CallbackHandler(public_key=self.langfuse_public_key)]
+
+    def trace_url_from_callbacks(self, callbacks: list[Any]) -> str | None:
+        if get_client is None:
+            return None
+        trace_id = next(
+            (
+                getattr(callback, "last_trace_id", None)
+                for callback in callbacks
+                if getattr(callback, "last_trace_id", None)
+            ),
+            None,
+        )
+        if not trace_id:
+            return None
+        if self.langfuse_host and self.langfuse_project_id:
+            return f"{self.langfuse_host.rstrip('/')}/project/{self.langfuse_project_id}/traces/{trace_id}"
+        try:
+            public_key = getattr(callbacks[0], "public_key", None) if callbacks else None
+            client = get_client(public_key=public_key) if public_key else get_client()
+            if hasattr(client, "flush"):
+                client.flush()
+            return client.get_trace_url(trace_id=trace_id)
+        except Exception:
+            return None
 
     @staticmethod
     def _clean_json(raw_text: str) -> dict[str, Any]:

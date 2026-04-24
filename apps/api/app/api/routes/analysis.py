@@ -5,12 +5,19 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.core.exceptions import NoValidQuotes
-from app.schemas.analysis import AnalysisResultPayload, HedgeScenarioResult, RecommendationCard
+from app.schemas.analysis import (
+    AnalysisResultPayload,
+    BankInstructionDraft,
+    HedgeScenarioResult,
+    RecommendationCard,
+)
 from app.services.ai_orchestrator_service import stream_analyst_explanation
 from app.services.analysis_run_service import (
+    draft_bank_instruction_for_run,
     get_context_for_run,
     get_result_for_run,
     run_analysis as run_analysis_service,
+    simulate_hedge_for_run,
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -89,12 +96,16 @@ class HedgeSimulateRequest(BaseModel):
     hedge_ratio: float  # 0 to 100
 
 
-@router.post("/{run_id}/hedge-simulate", response_model=HedgeScenarioResult)
+@router.post("/{run_id}/hedge-simulate", response_model=HedgeScenarioResult, response_model_exclude_defaults=True)
 async def hedge_simulate(run_id: str, request: HedgeSimulateRequest):
     """
     Pure math deterministic endpoint to recalculate risk exposure 
     based on the hedge slider value.
     """
+    result = simulate_hedge_for_run(run_id, request.hedge_ratio)
+    if result is not None:
+        return result
+
     run_payload = get_result_for_run(run_id)
     if run_payload is None:
         raise HTTPException(status_code=404, detail="Run ID not found or expired.")
@@ -106,22 +117,30 @@ async def hedge_simulate(run_id: str, request: HedgeSimulateRequest):
     winner = ranked_quotes[0]
     p50_cost = winner.cost_result.total_landed_p50
     p90_cost = winner.cost_result.total_landed_p90
-
     ratio = request.hedge_ratio / 100.0
-    
-    # Calculate the unhedged downside exposure (difference between p90 and p50)
     downside_risk = p90_cost - p50_cost
-    
-    # The higher the hedge ratio, the closer we get to p50 certainty.
-    # The unhedged portion is exposed to the p90 risk.
     adjusted_p50 = p50_cost
     adjusted_p90 = p50_cost + (downside_risk * (1.0 - ratio))
-    
-    impact = p90_cost - adjusted_p90
-    
+
     return HedgeScenarioResult(
         hedge_ratio=request.hedge_ratio,
         adjusted_p50=adjusted_p50,
         adjusted_p90=adjusted_p90,
-        impact_vs_unhedged=impact
+        impact_vs_unhedged=p90_cost - adjusted_p90,
     )
+
+
+class BankInstructionDraftRequest(BaseModel):
+    hedge_ratio: float
+
+
+@router.post("/{run_id}/bank-instruction-draft", response_model=BankInstructionDraft)
+async def bank_instruction_draft(run_id: str, request: BankInstructionDraftRequest):
+    """
+    Drafts JSON text for the frontend PDF printer. The backend never returns
+    binary PDF content, and a deterministic fallback keeps demo flow alive.
+    """
+    draft = draft_bank_instruction_for_run(run_id, request.hedge_ratio)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Run ID not found or expired.")
+    return draft

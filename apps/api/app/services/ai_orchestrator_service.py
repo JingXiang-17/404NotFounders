@@ -14,7 +14,7 @@ from app.providers.llm_provider import build_llm_provider
 
 logger = logging.getLogger(__name__)
 
-COMPARISON_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You have been given ranked supplier quotes with full cost breakdowns, FX simulation results, and market context. Your job is to:
+COMPARISON_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You have been given ranked supplier quotes with full cost breakdowns, FX simulation results, PP resin benchmark context, and market context. Your job is to:
 1. Confirm or adjust the winner (you may only swap rank #1 and #2, and only for: reliability, downside risk, MOQ lock-up, urgency mismatch, or disruption risk)
 2. Recommend timing: lock_now or wait
 3. Recommend hedge ratio (0-100)
@@ -22,7 +22,8 @@ COMPARISON_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You hav
 5. Add one caveat only if there is a material risk
 6. Explain why each non-winning supplier was not chosen (one sentence each)
 7. Provide a brief impact summary.
-Respond in strict JSON format matching:
+If the 30-day landed-cost Monte Carlo p50 path trends lower and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
+Return ONLY a valid JSON object. Do not include markdown, prose, code fences, or thinking text. Match this schema:
 {
   "recommended_quote_id": "uuid",
   "timing": "lock_now | wait",
@@ -36,7 +37,7 @@ Respond in strict JSON format matching:
 }
 """
 
-SINGLE_QUOTE_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You are evaluating a single supplier quote, not comparing multiple suppliers.
+SINGLE_QUOTE_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You are evaluating a single supplier quote, not comparing multiple suppliers. Use PP resin benchmark context when judging whether the material price is fair, premium, or high risk.
 Your job is to:
 1. Evaluate the quote as proceed, review_carefully, or do_not_recommend
 2. Recommend timing: lock_now or wait
@@ -45,7 +46,8 @@ Your job is to:
 5. Add one caveat only if there is a material risk
 6. Explain the main downside risk in one sentence
 7. Provide a brief impact summary
-Respond in strict JSON format matching:
+If the 30-day landed-cost Monte Carlo p50 path trends lower and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
+Return ONLY a valid JSON object. Do not include markdown, prose, code fences, or thinking text. Match this schema:
 {
   "recommended_quote_id": "uuid",
   "evaluation_label": "proceed | review_carefully | do_not_recommend",
@@ -66,6 +68,7 @@ class OrchestratorState(TypedDict):
     system_prompt: str
     ai_json_output: Dict[str, Any]
     messages: list[Any]
+    trace_url: str | None
 
 
 async def node_reason_recommendation(state: OrchestratorState) -> OrchestratorState:
@@ -80,16 +83,18 @@ async def node_reason_recommendation(state: OrchestratorState) -> OrchestratorSt
     # We use invoke with thinking enabled, requesting JSON via the provider.
     # LLMProvider sets up the Langfuse callback implicitly.
     try:
+        callbacks = provider._callbacks()
         # We need to tell the model to return JSON.
         response = provider.client.invoke(
             messages,
-            config={"callbacks": provider._callbacks()},
+            config={"callbacks": callbacks},
             # GLM-5.1 supports thinking, we can pass it if supported by the client.
             # extra_body={"thinking": {"type": "enabled"}}
         )
         content = response.content if isinstance(response.content, str) else str(response.content)
         parsed_json = provider._clean_json(content)
         state["ai_json_output"] = parsed_json
+        state["trace_url"] = provider.trace_url_from_callbacks(callbacks)
     except Exception as exc:
         logger.error(f"Reasoning node failed: {exc}")
         state["ai_json_output"] = {}
@@ -125,9 +130,10 @@ async def stream_analyst_explanation(context_str: str) -> AsyncGenerator[str, No
     ]
     
     try:
+        callbacks = provider._callbacks()
         async for chunk in provider.client.astream(
             messages,
-            config={"callbacks": provider._callbacks()},
+            config={"callbacks": callbacks},
         ):
             # Also yield thinking tokens if present in additional_kwargs
             reasoning = chunk.additional_kwargs.get("reasoning_content", "")

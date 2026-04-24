@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -46,7 +46,7 @@ function ReviewPageContent() {
   const quantityMt = Number(searchParams.get("quantity") ?? "0");
   const urgency = searchParams.get("urgency") ?? "normal";
 
-  const [localQuotes, setLocalQuotes] = useState<Record<string, ExtractedQuote>>({});
+  const [quoteOverrides, setQuoteOverrides] = useState<Record<string, ExtractedQuote>>({});
   const [hedgePreference, setHedgePreference] = useState("balance");
 
   const quotesQuery = useQuery({
@@ -58,18 +58,20 @@ function ReviewPageContent() {
     },
   });
 
-  useEffect(() => {
-    if (!quotesQuery.data) {
-      return;
-    }
+  const extractedQuotesById = useMemo(() => {
     const nextLocalState: Record<string, ExtractedQuote> = {};
-    quotesQuery.data.forEach((state) => {
+    quotesQuery.data?.forEach((state) => {
       if (state.extracted_quote) {
         nextLocalState[state.extracted_quote.quote_id] = editableQuoteFromState(state)!;
       }
     });
-    setLocalQuotes(nextLocalState);
+    return nextLocalState;
   }, [quotesQuery.data]);
+
+  const localQuotes = useMemo(
+    () => ({ ...extractedQuotesById, ...quoteOverrides }),
+    [extractedQuotesById, quoteOverrides],
+  );
 
   const fxQuery = useQuery({
     queryKey: ["fx-latest"],
@@ -122,9 +124,10 @@ function ReviewPageContent() {
   });
 
   const handleFieldChange = (quoteId: string, field: keyof ExtractedQuote, value: string) => {
-    setLocalQuotes((prev) => {
+    setQuoteOverrides((prev) => {
       const existing = prev[quoteId];
-      if (!existing) {
+      const baseQuote = localQuotes[quoteId];
+      if (!existing && !baseQuote) {
         return prev;
       }
       const nextValue =
@@ -136,7 +139,7 @@ function ReviewPageContent() {
       return {
         ...prev,
         [quoteId]: {
-          ...existing,
+          ...(existing ?? baseQuote),
           [field]: nextValue,
           extraction_confidence: 1.0,
         },

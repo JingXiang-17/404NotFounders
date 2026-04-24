@@ -1,13 +1,14 @@
 "use client";
 
 import { Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { FxSimulationResult } from "@/lib/types";
+import { FxSimulationResult, HedgeScenarioResult, LandedCostScenario, ResinPriceScenario } from "@/lib/types";
 
 interface FxFanChartProps {
-  data: FxSimulationResult;
+  data: FxSimulationResult | ResinPriceScenario | LandedCostScenario | HedgeScenarioResult;
+  valuePrefix?: string;
 }
 
-export function FxFanChart({ data }: FxFanChartProps) {
+export function FxFanChart({ data, valuePrefix = "" }: FxFanChartProps) {
   // Convert arrays into an array of objects for Recharts
   const chartData = Array.from({ length: data.horizon_days }, (_, i) => ({
     day: i,
@@ -35,6 +36,9 @@ export function FxFanChart({ data }: FxFanChartProps) {
             contentStyle={{ backgroundColor: "var(--color-surface)", borderColor: "var(--color-border)", color: "var(--color-foreground)" }}
             itemStyle={{ color: "var(--color-primary)" }}
             labelStyle={{ color: "var(--color-secondary-text)" }}
+            formatter={(value) =>
+              `${valuePrefix}${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+            }
           />
           {/* 
             Overlapping areas (NOT stacked).

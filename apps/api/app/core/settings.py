@@ -58,7 +58,12 @@ class AppSettings:
         _load_dotenv(api_dir / ".env", root_dir / ".env")
         data_dir = _path_env("DATA_DIR", root_dir / "data", base_dir=api_dir)
         reference_dir = _path_env("REFERENCE_DIR", data_dir / "reference", base_dir=api_dir)
-        snapshot_dir = _path_env("SNAPSHOT_DIR", data_dir / "snapshots", base_dir=api_dir)
+        
+        demo_mode_str = _optional_env("DEMO_MODE")
+        demo_mode = demo_mode_str is not None and demo_mode_str.lower() in ("1", "true", "yes")
+        
+        snapshot_dir_name = "snapshots_frozen" if demo_mode else "snapshots"
+        snapshot_dir = _path_env("SNAPSHOT_DIR", data_dir / snapshot_dir_name, base_dir=api_dir)
         raw_dir = _path_env("RAW_ARTIFACT_DIR", data_dir / "raw", base_dir=api_dir)
         tmp_dir = _path_env("TMP_DIR", data_dir / "tmp", base_dir=api_dir)
         return cls(

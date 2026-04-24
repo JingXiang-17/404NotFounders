@@ -74,7 +74,6 @@ export default function AnalysisProgressPage() {
       return;
     }
 
-    setVisibleSteps(TIMELINE_STEPS.length);
     const handle = window.setTimeout(() => {
       router.replace(`/analysis/${runId}/results`);
     }, 1200);
