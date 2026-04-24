@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -73,6 +74,76 @@ def _render_first_two_pages(pdf_bytes: bytes) -> list[bytes]:
     return images
 
 
+def _extract_text_pages(pdf_bytes: bytes) -> list[str]:
+    if fitz is None:
+        return []
+    try:
+        document = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return []
+
+    pages: list[str] = []
+    for page_index in range(min(2, document.page_count)):
+        pages.append(document.load_page(page_index).get_text())
+    document.close()
+    return pages
+
+
+def _extract_quote_from_text(text: str) -> ExtractedQuote | None:
+    normalized = text.replace("\r\n", "\n")
+    if "QUOTATION" not in normalized.upper():
+        return None
+
+    supplier_name = _first_match(normalized, r"Page\s+\d+\s*\n(?P<value>.+?)\n")
+    terms = _first_match(normalized, r"Terms:\s*(?P<value>FOB[^\n]+)")
+    origin = _first_match(normalized, r"Origin:\s*(?P<value>FOB[^\n]+)") or terms
+    incoterm = "FOB" if (terms and terms.upper().startswith("FOB")) or (origin and origin.upper().startswith("FOB")) else None
+    currency = _first_match(normalized, r"Currency:\s*(?P<value>[A-Z]{3})")
+
+    unit_price = None
+    price_match = re.search(
+        r"\b(?P<currency>USD|CNY|THB|IDR)\s+(?P<price>[\d,]+(?:\.\d+)?)\s*/\s*(?:\n\s*)?MT\b",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if price_match:
+        currency = currency or price_match.group("currency").upper()
+        unit_price = float(price_match.group("price").replace(",", ""))
+
+    moq = _first_int(normalized, r"MOQ\s*\n\s*(?P<value>\d+)\s*MT")
+    lead_start = _first_int(normalized, r"Lead Time\s*\n\s*(?P<value>\d+)(?:-\d+)?")
+    lead_end = _first_int(normalized, r"Lead Time\s*\n\s*\d+-(?P<value>\d+)")
+    lead_time_days = lead_end or lead_start
+    payment_terms = _first_match(normalized, r"Payment Terms\s*\n\s*(?P<value>.+?)(?:\n\s*Packing|\n\s*Price Basis)")
+
+    return ExtractedQuote(
+        quote_id=uuid4(),
+        upload_id=uuid4(),
+        supplier_name=supplier_name,
+        origin_port_or_country=origin,
+        incoterm=incoterm,
+        unit_price=unit_price,
+        currency=currency,
+        moq=moq,
+        lead_time_days=lead_time_days,
+        payment_terms=payment_terms,
+        extraction_confidence=0.98,
+    )
+
+
+def _first_match(text: str, pattern: str) -> str | None:
+    match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None
+    value = match.group("value").strip()
+    return re.sub(r"\s+", " ", value) if value else None
+
+
+def _first_int(text: str, pattern: str) -> int | None:
+    value = _first_match(text, pattern)
+    return int(value) if value and value.isdigit() else None
+
+
 async def process_upload(file: UploadFile) -> QuoteUpload:
     upload_id = uuid4()
     quote_id = uuid4()
@@ -92,10 +163,15 @@ async def process_upload(file: UploadFile) -> QuoteUpload:
     )
     QUOTE_STATES[quote_id] = QuoteState(upload=upload)
 
-    provider = build_llm_provider()
-    page_images = _render_first_two_pages(pdf_bytes)
-    extracted_pages = [provider.extract_quote_fields(image_bytes) for image_bytes in page_images]
-    merged_quote = _merge_quotes(quote_id=quote_id, upload_id=upload_id, page_quotes=extracted_pages)
+    text_pages = _extract_text_pages(pdf_bytes)
+    extracted_pages = [
+        quote for quote in (_extract_quote_from_text(text_page) for text_page in text_pages) if quote is not None
+    ]
+    if not extracted_pages or validate_quote(_merge_quotes(base_quote_id=quote_id, upload_id=upload_id, page_quotes=extracted_pages)).status != "valid":
+        provider = build_llm_provider()
+        page_images = _render_first_two_pages(pdf_bytes)
+        extracted_pages = [provider.extract_quote_fields(image_bytes) for image_bytes in page_images]
+    merged_quote = _merge_quotes(base_quote_id=quote_id, upload_id=upload_id, page_quotes=extracted_pages)
     validation = validate_quote(merged_quote)
 
     upload.status = "validated" if validation.status == "valid" else "invalid"
