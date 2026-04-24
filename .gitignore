@@ -55,7 +55,7 @@ apps/web-broken-*/
 stitch_lintasniaga_procurement_copilot/
 
 # Local temp dirs created during verification
-.tmp_test/
+.tmp_test/  
 data/tmp/test_runs/
 
 # Data — snapshots and raw are runtime artefacts, don't commit them

@@ -7,7 +7,7 @@
 In simple terms:
 - **You provide** a few supplier quotations (PDF/images/manual entry) and basic purchase context (SKU, quantity, required-by date).
 - **The system pulls** supporting macro and FX context (e.g., exchange rates and key indicators) to ground the analysis.
-- **The reasoning engine** uses **Z.AI GLM‑4.7** (with auditable “thinking”) orchestrated via an agent workflow (e.g., LangGraph) so decisions are explainable and traceable.
+- **The reasoning engine** uses **ilmu-glm-5.1** (with auditable thinking) orchestrated via an agent workflow (e.g., LangGraph) so decisions are explainable and traceable.
 - **It outputs** a recommended supplier choice, an appropriate **hedge ratio**, and a clear explanation of *why*—including the assumptions and supporting data.
 
 At a high level, the intended architecture is:

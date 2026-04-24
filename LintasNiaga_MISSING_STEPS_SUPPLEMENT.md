@@ -347,8 +347,8 @@ def test_settings():
         SNAPSHOT_DIR="../../data/snapshots",
         SQLITE_PATH=":memory:",
         MODEL_API_KEY="test-key-not-real",
-        MODEL_BASE_URL="https://api.z.ai/api/paas/v4/",
-        MODEL_NAME="glm-5.1",
+        MODEL_BASE_URL="https://api.ilmu.ai/v1",
+        MODEL_NAME="ilmu-glm-5.1",
     )
 
 @pytest.fixture

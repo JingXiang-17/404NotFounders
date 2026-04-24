@@ -104,7 +104,7 @@ export function AnalysisShell({
         <main className="flex-1">{children}</main>
 
         <footer className="mt-10 flex items-center justify-center border-t border-border pt-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-secondary-text/70">
-          {footer ?? "Powered by Z.AI GLM-5.1 / Traces recorded in Langfuse"}
+          {footer ?? "Powered by ilmu-glm-5.1 / Traces recorded in Langfuse"}
         </footer>
       </div>
     </div>

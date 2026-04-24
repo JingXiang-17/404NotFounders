@@ -1,7 +1,7 @@
 # LintasNiaga — 3-Day Antigravity Build Playbook
 
 > **Deadline:** 26 April 2026, 07:59:59 UTC+8
-> **Model:** GLM-5.1 via `ilmu-glm5.1` free key
+> **Model:** ilmu-glm-5.1
 > **Build tool:** Google Antigravity (Agent-First, Pro tier)
 > **Team:** 5 people, all with Antigravity + Google AI Pro
 > **Scope lock:** PP Resin HS 3902.10 · FOB only · Port Klang · Up to 5 quotes
@@ -93,9 +93,9 @@ Create `apps/api/.env`:
 
 ```env
 # GLM-5.1
-MODEL_API_KEY=<your ilmu-glm5.1 key>
-MODEL_BASE_URL=https://api.z.ai/api/paas/v4/
-MODEL_NAME=glm-5.1
+MODEL_API_KEY=<your ilmu key>
+MODEL_BASE_URL=https://api.ilmu.ai/v1
+MODEL_NAME=ilmu-glm-5.1
 
 # Paths
 SQLITE_PATH=./lintasniaga.db
@@ -128,18 +128,18 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ### S6. Verify GLM-5.1 works
 
 ```bash
-curl https://api.z.ai/api/paas/v4/chat/completions \
+curl https://api.ilmu.ai/v1/chat/completions \
   -H "Authorization: Bearer $MODEL_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "glm-5.1",
+    "model": "ilmu-glm-5.1",
     "messages": [{"role": "user", "content": "Say hello in Bahasa Malaysia"}],
     "thinking": {"type": "enabled"},
     "max_tokens": 512
   }'
 ```
 
-If you get a response with `reasoning_content` — you're good. If the model string is different (e.g. the hackathon key uses `glm-5` or `glm-4.7`), update `MODEL_NAME` in `.env` and everywhere below. The code is model-string-agnostic — only `.env` changes.
+If you get a response with `reasoning_content` — you're good. If the provider gives you a different model string, update `MODEL_NAME` in `.env` and everywhere below. The code is model-string-agnostic — only `.env` changes.
 
 ### S7. Antigravity configuration for the ENTIRE team
 
@@ -170,7 +170,7 @@ Create `.antigravity/rules.md` in the repo root:
 - Backend: Python 3.11, FastAPI, Pydantic v2, httpx, tenacity, pandas, numpy, yfinance, holidays, gnews, trafilatura
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Recharts, React Hook Form + Zod, TanStack Query
 - Persistence: SQLite (dynamic state), local JSON (reference + snapshots)
-- AI: GLM-5.1 via OpenAI-compatible API at https://api.z.ai/api/paas/v4/
+- AI: ilmu-glm-5.1 via OpenAI-compatible API at https://api.ilmu.ai/v1
 - Observability: Langfuse for AI traces, structured logging for app
 
 ## Code style
@@ -295,7 +295,7 @@ from langchain_openai import ChatOpenAI
 import os
 
 llm = ChatOpenAI(
-    model=os.getenv("MODEL_NAME", "glm-5.1"),
+    model=os.getenv("MODEL_NAME", "ilmu-glm-5.1"),
     openai_api_key=os.getenv("MODEL_API_KEY"),
     openai_api_base=os.getenv("MODEL_BASE_URL"),
     temperature=0.3,
@@ -626,7 +626,7 @@ Build these pages:
    - Subtext: "LintasNiaga compares FOB PP Resin quotes, simulates FX scenarios, and recommends the best-value supplier for Malaysian importers."
    - One teal CTA button "Start Analysis" linking to /analysis/new
    - Three feature cards below: "Multi-Supplier Comparison", "FX Risk Simulation", "Explainable AI Reasoning"
-   - Footer: "UMHackathon 2026 · Domain 2 · Built on Z.AI GLM-5.1"
+   - Footer: "UMHackathon 2026 · Domain 2 · Built on ilmu-glm-5.1"
 
 2. src/app/analysis/new/page.tsx — Quote upload wizard (Step 1 only for now)
    - Top stepper: Step 1 "Upload Quotes" (active) → Step 2 "Review" → Step 3 "Analysis" → Step 4 "Decision"
@@ -1087,7 +1087,7 @@ You can always revert to this if something breaks later.
 
 1. **GLM-5.1 is mandatory for ALL product reasoning.** Using Gemini (Antigravity's default) for product reasoning disqualifies you. Gemini powers Antigravity as your build tool. GLM-5.1 powers your product's LLM calls. These are different things.
 
-2. **The model string matters.** If your free key uses `glm-5.1`, that's what goes in `.env`. If it uses `glm-5` or something else, change MODEL_NAME. The code reads from `.env` everywhere — one change propagates.
+2. **The model string matters.** The repo is currently standardized on `ilmu-glm-5.1`. If your provider gives you a different model string, change `MODEL_NAME`. The code reads from `.env` everywhere — one change propagates.
 
 3. **Snapshot freeze before demo.** Always freeze working snapshot data before recording any demo video. Never rely on live API calls during recording.
 

@@ -1,3 +1,13 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock optional dependencies so llm_provider can be imported in the test environment
+sys.modules["langchain_openai"] = MagicMock()
+sys.modules["langchain_core.messages"] = MagicMock()
+sys.modules["langchain_core"] = MagicMock()
+sys.modules["langfuse"] = MagicMock()
+sys.modules["langfuse.langchain"] = MagicMock()
+
 import pytest
 from uuid import uuid4
 from app.core.config import Settings
@@ -10,8 +20,8 @@ def test_settings():
         SNAPSHOT_DIR="../../data/snapshots",
         SQLITE_PATH=":memory:",
         MODEL_API_KEY="test-key-not-real",
-        MODEL_BASE_URL="https://api.z.ai/api/paas/v4/",
-        MODEL_NAME="glm-5.1",
+        MODEL_BASE_URL="https://api.ilmu.ai/v1",
+        MODEL_NAME="ilmu-glm-5.1",
     )
 
 @pytest.fixture

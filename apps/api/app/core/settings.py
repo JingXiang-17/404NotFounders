@@ -50,6 +50,11 @@ class AppSettings:
     openweather_api_key: str | None = None
     gnews_api_key: str | None = None
     model_api_key: str | None = None
+    model_base_url: str | None = None
+    model_name: str | None = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_host: str | None = None
 
     @classmethod
     def from_env(cls) -> "AppSettings":
@@ -76,4 +81,27 @@ class AppSettings:
             openweather_api_key=_optional_env("OPENWEATHER_API_KEY"),
             gnews_api_key=_optional_env("GNEWS_API_KEY"),
             model_api_key=_optional_env("MODEL_API_KEY"),
+            model_base_url=_optional_env("MODEL_BASE_URL"),
+            model_name=_optional_env("MODEL_NAME"),
+            langfuse_public_key=_optional_env("LANGFUSE_PUBLIC_KEY"),
+            langfuse_secret_key=_optional_env("LANGFUSE_SECRET_KEY"),
+            langfuse_host=_optional_env("LANGFUSE_HOST"),
         )
+        instance.validate_langfuse()
+        return instance
+
+    def validate_langfuse(self) -> None:
+        """Raise RuntimeError at startup if any Langfuse credential is missing."""
+        missing: list[str] = []
+        if not self.langfuse_public_key:
+            missing.append("LANGFUSE_PUBLIC_KEY")
+        if not self.langfuse_secret_key:
+            missing.append("LANGFUSE_SECRET_KEY")
+        if not self.langfuse_host:
+            missing.append("LANGFUSE_HOST")
+        if missing:
+            raise RuntimeError(
+                f"[LintasNiaga] Langfuse is required but the following environment variables are "
+                f"not set: {', '.join(missing)}. "
+                f"Add them to apps/api/.env before starting the server."
+            )
