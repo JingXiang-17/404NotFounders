@@ -1,4 +1,4 @@
-# LintasNiaga
+# 🌍 LintasNiaga 🚀
 
 > **Choose the best-value supplier with less hidden risk.**
 
@@ -6,80 +6,142 @@ LintasNiaga is a procurement decision-support copilot built for Malaysian plasti
 
 ---
 
-## The Problem
+## 🔗 Quick Links
 
-Malaysian SMEs sourcing PP resin face a quiet but costly problem: comparing supplier quotes is harder than it looks.
-
-A quote arrives as a PDF. It carries a price, a currency, a lead time. But on its own it tells you almost nothing about the **real landed cost** — after freight, tariffs, MOQ lock-up, currency volatility, and the risk that a suspiciously cheap price is priced against a deteriorating benchmark.
-
-Procurement teams patch this together with spreadsheets, gut feel, and outdated FX assumptions. The result is avoidable margin loss, slow decisions, and limited ability to justify to management *why* one supplier was chosen over another.
+| Document | Link |
+|---|---|
+| **📄 PRD (Product)** | [Link to PRD](#) |
+| **⚙️ SAD (System)** | [Link to SAD](#) |
+| **🧪 QATD (Testing)** | [Link to QATD](#) |
+| **📊 Pitching Deck** | [Link to Pitch Deck](#) |
+| **🎥 10 Minutes Pitching Video** | [Link to Video](#) |
 
 ---
 
-## What LintasNiaga Does
+## 👥 Team 404NotFounders
+
+| Name | Role |
+|---|---|
+| [Name 1] | [Role 1] |
+| [Name 2] | [Role 2] |
+| [Name 3] | [Role 3] |
+| [Name 4] | [Role 4] |
+
+*(UMHackathon 2026, Domain 2)*
+
+---
+
+## 🔄 App Workflow
 
 LintasNiaga walks the user through a focused four-stage workflow:
 
-**1. Upload**
-Upload up to five supplier quote PDFs. The system extracts key fields — supplier name, origin, incoterm, currency, unit price, MOQ, and lead time — using deterministic extraction with a GLM-5.1 vision fallback.
-
-**2. Review and Repair**
-Extracted fields are surfaced for review before anything is committed to analysis. The user can correct values, select order quantity, urgency level, and hedge preference (Balanced / Conservative / Aggressive).
-
-**3. Analysis**
-The backend refreshes live market and logistics context — FX rates, Brent crude, weather risk, macro indicators, news signals, and PP resin benchmark data — then runs:
-- deterministic landed-cost calculation across all quotes
-- 30-day Monte Carlo fan chart using real FX and Brent volatility
-- bounded AI reasoning over the assembled evidence
-
-**4. Decision Result**
-The user receives a single, traceable recommendation:
-- **Which supplier to choose** (with ranked alternatives)
-- **Whether to lock now or wait**
-- **How much FX exposure to hedge**
-- A 30-day landed-cost fan chart with p10 / p50 / p90 bands
-- PP resin benchmark fairness check against SunSirs market data
-- A downloadable bank-instruction PDF draft for hedge workflow execution
+1. **📥 Upload:** Upload up to five supplier quote PDFs. The system extracts key fields using deterministic extraction with a GLM-5.1 vision fallback.
+2. **🔍 Review and Repair:** Extracted fields are surfaced for review. Users can correct values, select order quantity, urgency level, and hedge preference (Balanced / Conservative / Aggressive).
+3. **🧠 Analysis:** The backend refreshes live market and logistics context (FX rates, Brent crude, weather risk, macro indicators, news signals) then runs deterministic landed-cost calculations and a 30-day Monte Carlo fan chart, capped off by bounded AI reasoning.
+4. **📊 Decision Result:** Receive a single, traceable recommendation:
+   - Which supplier to choose (with ranked alternatives)
+   - Whether to lock now or wait
+   - How much FX exposure to hedge
+   - A 30-day landed-cost fan chart with p10 / p50 / p90 bands
+   - Downloadable bank-instruction PDF
 
 ---
 
-## Why This Matters
+## 🏗️ Architecture Diagram
 
-The core insight behind LintasNiaga is simple: **the winning quote is not always the cheapest quote**.
+```mermaid
+graph TD
+    %% Frontend
+    subgraph Frontend [🌐 Next.js Frontend]
+        UI[Decision Workspace UI]
+        Upload[Quote Upload & Review]
+        Results[Fan Chart & Insights]
+    end
 
-Hidden landed-cost drivers — freight terms, tariff exposure, MOQ penalties, supplier reliability, FX trajectory — can silently flip the ranking. A quote that looks 5% cheaper can land 12% more expensive when the full picture is assembled.
+    %% Backend APIs
+    subgraph Backend [⚡ FastAPI Backend]
+        API[FastAPI Routes]
+        LCC[Deterministic Landed Cost Calculator]
+        MC[Monte Carlo Engine]
+    end
 
-LintasNiaga assembles that picture automatically and explains the reasoning in plain language, so a procurement executive can act with confidence and explain their decision to management.
+    %% AI & Orchestration
+    subgraph AI_Layer [🤖 AI Orchestration]
+        LG[LangGraph Pipeline]
+        GLM[GLM-5.1 Provider]
+        Trace[Langfuse Observability]
+    end
+
+    %% Data & External
+    subgraph Data [📁 Data & External APIs]
+        Local[File-Backed Snapshots & Ref Data]
+        Ext[yFinance, OpenWeather, GNews, SunSirs]
+    end
+
+    %% Wiring
+    UI --> |PDFs / Config| API
+    API --> |Validation & Matching| Local
+    Local -.-> |Update Snapshots| Ext
+    
+    API --> |Compute Landed Cost| LCC
+    LCC --> |Simulate 2,000 Paths| MC
+    
+    MC --> |Results & Context| LG
+    LG <--> |Reasoning / Justification| GLM
+    LG -.-> |Tracing| Trace
+    
+    LG --> |Bounded Recommendation JSON| API
+    API --> |Render Dashboard| Results
+```
 
 ---
 
-## Technology Overview
+## 🛠️ Setup Guide
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js (App Router) |
-| Backend | FastAPI (Python) |
-| AI Orchestration | LangGraph + ilmu-GLM-5.1 |
-| Observability | Langfuse |
-| Market Data | yfinance, OpenWeatherMap, OpenDOSM, GNews, SunSirs |
-| Data Layer | File-backed snapshot store |
+### 1. Clone the repository
+```bash
+git clone https://github.com/JingXiang-17/404NotFounders.git
+cd 404NotFounders
+```
 
-The AI layer is intentionally **bounded**: GLM-5.1 explains and narrates the recommendation, but the procurement math — landed cost, Monte Carlo simulation, benchmark comparison — is fully deterministic and auditable. The model does not invent the decision.
+### 2. Backend Setup
+```bash
+cd apps/api
+python -m venv .venv
+source .venv/Scripts/activate  # On Windows
+pip install -e .
+cp .env.example .env           # Configure your API keys (e.g., ZHIPU_API_KEY)
+uvicorn app.main:app --reload --port 8000
+```
+
+### 3. Frontend Setup
+```bash
+cd apps/web
+pnpm install
+pnpm dev
+```
+
+The application will be running at `http://localhost:3000`.
 
 ---
 
-## Documentation
+## 📁 Repository Structure
 
-For full product, system, and QA documentation:
-
-| Document | Description |
-|---|---|
-| [`PRD.md`](./PRD.md) | Product requirements — what the system does and why |
-| [`SAD.md`](./SAD.md) | System architecture — how the system is structured and how it works |
-| [`QATD.md`](./QATD.md) | Quality assurance — test coverage, results, and known gaps |
-
----
-
-## Team
-
-**404NotFounders** — UMHackathon 2026, Domain 2
+```text
+404NotFounders/
+├── apps/
+│   ├── api/                 # FastAPI Backend
+│   │   ├── app/             # Application Logic (Routes, Services, Providers)
+│   │   ├── data/            # Local Reference & Snapshot Data
+│   │   ├── scripts/         # Ingestion Scripts
+│   │   └── tests/           # Pytest Test Suite
+│   └── web/                 # Next.js Frontend
+│       ├── src/app/         # Next.js App Router (Upload, Review, Analysis, Results)
+│       ├── src/components/  # UI Components & Dashboard Widgets
+│       └── src/lib/         # Frontend Utilities & Type Contracts
+├── .agent/                  # AI Agent Skills & Workflows
+├── example_pdf/             # Sample PDF Quotes for demonstration
+├── tests/                   # E2E & Integration testing artifacts
+├── Makefile                 # Development helper commands
+└── README.md                # Project documentation
+```

@@ -89,7 +89,7 @@ export default function NewAnalysisPage() {
     <AnalysisShell
       currentStep="upload"
       title="Upload Documentation"
-      subtitle="Stage 1 of 4: Centralized Procurement Procurement Workflow"
+      subtitle="Stage 1 of 4: Centralized Procurement Workflow"
       actions={
         <div className="mt-4 md:mt-0 flex items-center gap-2">
           <span className="text-label-caps font-label-caps text-secondary uppercase bg-surface-container px-3 py-1 rounded">Session ID: PRQ-2024-089</span>
@@ -139,9 +139,9 @@ export default function NewAnalysisPage() {
               <div>
                 <label className="block text-body-sm font-semibold text-on-background mb-1">Required Quantity</label>
                 <div className="relative">
-                  <input 
-                    className="w-full border border-outline-variant rounded-lg p-2.5 text-body-base focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] transition-all outline-none" 
-                    placeholder="Enter units (e.g. 5000)" 
+                  <input
+                    className="w-full border border-outline-variant rounded-lg p-2.5 text-body-base focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] transition-all outline-none"
+                    placeholder="Enter units (e.g. 5000)"
                     type="number"
                     value={quantity}
                     onChange={(event) => setQuantity(event.target.value === "" ? "" : Number(event.target.value))}
@@ -153,10 +153,10 @@ export default function NewAnalysisPage() {
                 <label className="block text-body-sm font-semibold text-on-background mb-3">Urgency Level</label>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="cursor-pointer">
-                    <input 
-                      className="peer sr-only" 
-                      name="urgency" 
-                      type="radio" 
+                    <input
+                      className="peer sr-only"
+                      name="urgency"
+                      type="radio"
                       value="normal"
                       checked={urgency === "Normal"}
                       onChange={() => setUrgency("Normal")}
@@ -166,10 +166,10 @@ export default function NewAnalysisPage() {
                     </div>
                   </label>
                   <label className="cursor-pointer">
-                    <input 
-                      className="peer sr-only" 
-                      name="urgency" 
-                      type="radio" 
+                    <input
+                      className="peer sr-only"
+                      name="urgency"
+                      type="radio"
                       value="urgent"
                       checked={urgency === "Urgent"}
                       onChange={() => setUrgency("Urgent")}
