@@ -22,10 +22,11 @@ LintasNiaga is a procurement decision-support copilot built for Malaysian plasti
 
 | Name | Role |
 |---|---|
-| [Name 1] | [Role 1] |
-| [Name 2] | [Role 2] |
-| [Name 3] | [Role 3] |
-| [Name 4] | [Role 4] |
+| LIM XUAN NING | Product Lead |
+| YEW LIENN | Data Lead |
+| KOR JING XIANG | Demo Lead |
+| NG HONG JON | Frontend Developer |
+| OOI FU CHUIN | Backend Developer |
 
 *(UMHackathon 2026, Domain 2)*
 
