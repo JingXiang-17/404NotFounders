@@ -43,6 +43,10 @@ Thumbs.db
 .vercel
 *.pem
 
+# Antigravity local artifacts
+.antigravity/*
+!.antigravity/rules.md
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
