@@ -438,20 +438,19 @@ async def execute_analysis_run(
     )
     _run_contexts[run_id] = context_str
 
-    try:
-        graph = build_ai_graph()
-        initial_state: OrchestratorState = {
-            "context_str": context_str,
-            "system_prompt": get_reasoning_system_prompt(single_quote_mode=single_quote_mode),
-            "ai_json_output": {},
-            "messages": [],
-            "trace_url": None,
-        }
-        final_state = await graph.ainvoke(initial_state)
-        ai_json = final_state.get("ai_json_output", {})
-        trace_url = final_state.get("trace_url")
-    except Exception as exc:
-        raise ValueError(f"Strict analysis blocked: GLM/LangGraph reasoning failed before recommendation: {exc}") from exc
+    # No try/except — AI orchestration failures must propagate so the caller
+    # receives a proper error response rather than a silent empty recommendation.
+    graph = build_ai_graph()
+    initial_state: OrchestratorState = {
+        "context_str": context_str,
+        "system_prompt": get_reasoning_system_prompt(single_quote_mode=single_quote_mode),
+        "ai_json_output": {},
+        "messages": [],
+        "trace_url": None,
+    }
+    final_state = await graph.ainvoke(initial_state)
+    ai_json = final_state.get("ai_json_output", {})
+    trace_url = final_state.get("trace_url")
 
     if not ai_json:
         raise ValueError("Strict analysis blocked: GLM returned empty recommendation JSON.")
@@ -841,8 +840,9 @@ async def draft_bank_instruction_for_run(run_id: str, hedge_ratio: float) -> Ban
         merged["generated_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         return BankInstructionDraft(**merged)
     except Exception as exc:
-        logger.warning("Bank instruction LLM draft failed for run %s: %s", run_id, exc)
-        return fallback
+        # No fallback — re-raise so the caller knows the LLM/Langfuse call failed.
+        logger.error("Bank instruction LLM draft failed for run %s: %s", run_id, exc)
+        raise
 
 
 def _fx_spot_for_quote(quote_inputs: list[MonteCarloQuoteInput], quote_id: str) -> float:

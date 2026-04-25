@@ -84,25 +84,17 @@ async def node_reason_recommendation(state: OrchestratorState) -> OrchestratorSt
         HumanMessage(content=state["context_str"]),
     ]
     
-    # We use invoke with thinking enabled, requesting JSON via the provider.
     # LLMProvider sets up the Langfuse callback implicitly.
-    try:
-        callbacks = provider._callbacks()
-        # We need to tell the model to return JSON.
-        response = provider.client.invoke(
-            messages,
-            config={"callbacks": callbacks},
-            # GLM-5.1 supports thinking, we can pass it if supported by the client.
-            # extra_body={"thinking": {"type": "enabled"}}
-        )
-        content = response.content if isinstance(response.content, str) else str(response.content)
-        parsed_json = provider._clean_json(content)
-        state["ai_json_output"] = parsed_json
-        state["trace_url"] = provider.trace_url_from_callbacks(callbacks)
-    except Exception as exc:
-        logger.error(f"Reasoning node failed: {exc}")
-        state["ai_json_output"] = {}
-        
+    # No try/except — failures must surface to the caller.
+    callbacks = provider._callbacks()
+    response = provider.client.invoke(
+        messages,
+        config={"callbacks": callbacks},
+    )
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    parsed_json = provider._clean_json(content)
+    state["ai_json_output"] = parsed_json
+    state["trace_url"] = provider.trace_url_from_callbacks(callbacks)
     return state
 
 
@@ -147,11 +139,8 @@ async def stream_analyst_explanation(
                 "metadata": {"langfuse_tags": ["stream", "analyst-explanation", "lintasniaga"]},
             },
         ):
-            # Also yield thinking tokens if present in additional_kwargs
             reasoning = chunk.additional_kwargs.get("reasoning_content", "")
             if reasoning:
-                # We can format reasoning differently if needed, or just yield it
-                # For simplicity, we just yield content. If you want to yield reasoning, you can wrap it in SSE tags.
                 pass
                 
             content = chunk.content
@@ -162,4 +151,6 @@ async def stream_analyst_explanation(
             on_trace_url(trace_url)
     except Exception as exc:
         logger.error(f"Streaming failed: {exc}")
-        yield f"Error generating explanation: {str(exc)}"
+        import json as _json
+        yield f"data: {_json.dumps({'error': True, 'message': str(exc), 'type': 'langfuse_stream_error'})}\n\n"
+        raise

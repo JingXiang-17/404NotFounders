@@ -17,7 +17,7 @@ Read DESIGN.md in the repo root for all color tokens, typography, spacing, and c
 - Backend: Python 3.11, FastAPI, Pydantic v2, httpx, tenacity, pandas, numpy, yfinance, holidays, gnews, trafilatura
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Recharts, React Hook Form + Zod, TanStack Query
 - Persistence: SQLite (dynamic state), local JSON (reference + snapshots)
-- AI: GLM-5.1 via OpenAI-compatible API at https://api.z.ai/api/paas/v4/
+- AI: ilmu-glm-5.1 via OpenAI-compatible API at https://api.ilmu.ai/v1
 - Observability: Langfuse for AI traces, structured logging for app
 
 ## Code style

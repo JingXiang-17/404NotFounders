@@ -21,10 +21,11 @@ except ImportError:  # pragma: no cover - runtime dependency
 try:
     from langfuse import Langfuse, get_client
     from langfuse.langchain import CallbackHandler
-except ImportError:  # pragma: no cover - runtime dependency
-    CallbackHandler = None
-    get_client = None
-    Langfuse = None
+except ImportError as _langfuse_import_err:  # pragma: no cover
+    raise DependencyNotAvailableError(
+        "langfuse and langfuse.langchain are required for LLM tracing. "
+        "Install them with: pip install langfuse"
+    ) from _langfuse_import_err
 
 
 EXTRACTION_PROMPT = (
@@ -51,11 +52,11 @@ class GLMProvider:
     def __init__(self) -> None:
         settings = AppSettings.from_env()
         self.model_api_key = os.getenv("MODEL_API_KEY") or settings.model_api_key
-        self.model_base_url = os.getenv("MODEL_BASE_URL")
-        self.model_name = os.getenv("MODEL_NAME", "glm-5.1")
-        self.langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-        self.langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-        self.langfuse_host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
+        self.model_base_url = os.getenv("MODEL_BASE_URL") or settings.model_base_url
+        self.model_name = os.getenv("MODEL_NAME") or settings.model_name or "ilmu-glm-5.1"
+        self.langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY") or settings.langfuse_public_key
+        self.langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY") or settings.langfuse_secret_key
+        self.langfuse_host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST") or settings.langfuse_host
         self.langfuse_project_id = os.getenv("LANGFUSE_PROJECT_ID")
         if self.langfuse_host and not os.getenv("LANGFUSE_BASE_URL"):
             # Langfuse SDK v3/v4 uses LANGFUSE_BASE_URL; older docs/examples
@@ -74,6 +75,8 @@ class GLMProvider:
             )
         if not self.model_api_key:
             raise ProviderError("MODEL_API_KEY is not configured for GLM quote extraction.")
+        if not self.model_base_url:
+            raise ProviderError("MODEL_BASE_URL is not configured for GLM quote extraction.")
 
         self.client = ChatOpenAI(
             model=self.model_name,
@@ -84,10 +87,18 @@ class GLMProvider:
         )
 
     def _callbacks(self) -> list[Any]:
-        if not CallbackHandler:
-            return []
-        if not (self.langfuse_public_key and self.langfuse_secret_key and self.langfuse_host):
-            return []
+        missing: list[str] = []
+        if not self.langfuse_public_key:
+            missing.append("LANGFUSE_PUBLIC_KEY")
+        if not self.langfuse_secret_key:
+            missing.append("LANGFUSE_SECRET_KEY")
+        if not self.langfuse_host:
+            missing.append("LANGFUSE_HOST (or LANGFUSE_BASE_URL)")
+        if missing:
+            raise ProviderError(
+                f"Langfuse tracing is required but the following credentials are not configured: "
+                f"{', '.join(missing)}. Set them in apps/api/.env before running."
+            )
         return [CallbackHandler()]
 
     def trace_url_from_callbacks(self, callbacks: list[Any]) -> str | None:
@@ -106,8 +117,10 @@ class GLMProvider:
                 client = get_client()
                 if hasattr(client, "flush"):
                     client.flush()
-            except Exception:
-                pass
+            except Exception as exc:
+                raise ProviderError(
+                    f"Langfuse client flush failed after trace capture. Trace ID: {trace_id}. Error: {exc}"
+                ) from exc
         if self.langfuse_host and self.langfuse_project_id:
             return f"{self.langfuse_host.rstrip('/')}/project/{self.langfuse_project_id}/traces/{trace_id}"
         try:
