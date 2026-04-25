@@ -10,11 +10,11 @@ LintasNiaga is a procurement decision-support copilot built for Malaysian plasti
 
 | Document | Link |
 |---|---|
-| **📄 PRD (Product)** | [Link to PRD](#) |
-| **⚙️ SAD (System)** | [Link to SAD](#) |
-| **🧪 QATD (Testing)** | [Link to QATD](#) |
-| **📊 Pitching Deck** | [Link to Pitch Deck](#) |
-| **🎥 10 Minutes Pitching Video** | [Link to Video](#) |
+| **📄 PRD (Product)** | [Link to PRD](./docs/official/) |
+| **⚙️ SAD (System)** | [Link to SAD](./docs/official/) |
+| **🧪 QATD (Testing)** | [Link to QATD](./docs/official/) |
+| **📊 Pitching Deck** | [Link to Pitch Deck](./docs/official/) |
+| **🎥 10 Minutes Pitching Video** | [Link to Video](https://drive.google.com/drive/folders/1VgSEx5cqZeGbFzGqzyGN7SBi3syef3Zv) |
 
 ---
 
