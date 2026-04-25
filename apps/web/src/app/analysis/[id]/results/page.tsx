@@ -189,8 +189,15 @@ export default function ResultsPage() {
                 Deterministic 2,000-path simulation. Hedge changes reuse the same shocks, so the chart narrows without rerolling.
               </p>
             </div>
-            <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              D0 to D30
+            <div className="flex flex-col items-end gap-2">
+              <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                D0 to D30
+              </div>
+              <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-secondary-text">
+                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[rgba(0,245,212,0.8)]"></span> P10 (Optimistic)</span>
+                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-primary"></span> P50 (Expected)</span>
+                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[rgba(255,107,107,0.8)]"></span> P90 (Stress)</span>
+              </div>
             </div>
           </div>
 
