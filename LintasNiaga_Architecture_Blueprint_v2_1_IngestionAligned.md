@@ -1,89 +1,150 @@
 # LintasNiaga Architecture Blueprint
 
-## System Architecture for Hackathon v1 (Ingestion-Aligned Rewrite)
+## System Architecture for Hackathon v1.1 (Implementation-Aligned)
 
 **Project:** LintasNiaga  
 **Document Type:** Architecture blueprint  
-**Version:** 2.1  
-**Scope:** Architecture only, aligned to the latest PRD, locked ingestion contracts, and 48-hour backend plan  
-**Primary Goal:** Build a stable, explainable, judge-ready AI decision system without overengineering
+**Previous Version:** 2.1  
+**Current Version:** 2.2  
+**Last Grounded Against Code:** 2026-04-25  
+**Scope:** Architecture as currently implemented in the repository, with outdated assumptions removed  
+**Primary Goal:** Describe the real backend/frontend/runtime architecture truthfully enough for handoff, debugging, and judging
 
 ---
 
-## 1. Architecture Intent
+## 1. Current Status Summary
 
-LintasNiaga is not a generic chatbot and not a spreadsheet dashboard with an LLM pasted on top.
+LintasNiaga is currently a **backend-owned procurement analysis system** built around:
 
-It is a **backend-owned procurement decision system** with **two major runtime responsibilities** and **one support subsystem**:
+1. **Quote intake and validation**
+2. **External data ingestion into normalized snapshots**
+3. **Deterministic analysis plus bounded GLM reasoning**
+4. **Result delivery with hedge simulation, traceability, and bank-instruction drafting**
 
-1. **Quote Prep**  
-   - ingest supplier quote PDFs,  
-   - extract structured quote data,  
-   - validate scope and required fields.
+The codebase is no longer just “ingestion-aligned” in principle. It now contains:
 
-2. **Analysis**  
-   - load validated quotes,  
-   - load deterministic anchors and latest approved market/logistics snapshots,  
-   - compute landed-cost and risk outputs,  
-   - run bounded AI reasoning on top of those outputs,  
-   - return a canonical recommendation object.
+- live snapshot refresh checks inside the analysis run,
+- a real FX + Brent correlated Monte Carlo service,
+- Langfuse-backed AI traceability endpoints,
+- scheduled background refresh for some datasets,
+- SunSirs PP benchmark ingestion and quote-vs-market checks,
+- OpenWeather, GNews, holidays, and OpenDOSM feeds wired into analysis context.
 
-3. **Snapshot Ingestion Backbone**  
-   - fetch external data from selected sources,  
-   - normalize and validate it,  
-   - persist raw artifacts and cleaned snapshots,  
-   - feed analysis without introducing runtime scraping fragility.
+This document intentionally describes **what exists now**, not the earlier desired end-state.
 
-The architecture is designed to optimize for:
+---
 
-- demo stability,
-- clear ownership of truth,
-- explainable failure handling,
+## 2. What Is New, Changed, and Removed
+
+### 2.1 New Since the Earlier Blueprint
+
+- `fx_simulation_service.py` now provides a snapshot-only Monte Carlo service using:
+  - quote-currency FX snapshots,
+  - `USDMYR` freight FX conversion,
+  - Brent crude (`energy/BZ=F`) correlation,
+  - deterministic hedge replay using stable seeds,
+  - Langfuse span instrumentation for the simulation itself.
+- Analysis now exposes:
+  - `GET /analysis/{run_id}/traceability`
+  - `POST /analysis/{run_id}/hedge-simulate`
+  - `POST /analysis/{run_id}/bank-instruction-draft`
+- Snapshot read APIs now expose:
+  - latest FX points,
+  - latest macro,
+  - latest news,
+  - latest weather,
+  - latest resin.
+- Background tasks in `main.py` now refresh:
+  - GNews hourly,
+  - holidays daily,
+  - SunSirs resin daily.
+
+### 2.2 Changed From the Earlier Blueprint
+
+- The earlier blueprint said analysis should only consume snapshots and never refresh live sources.  
+  Current implementation is stricter and more hybrid:
+  - analysis still consumes normalized snapshots,
+  - but it first calls refresh/ensure-fresh logic for required datasets before computing results.
+- The earlier blueprint implied generalized centralized fallback logic.  
+  Current implementation is mixed:
+  - some services still support last-valid fallback,
+  - but the main analysis path is now intentionally strict and blocks when critical data is missing or invalid.
+- The earlier blueprint treated PP resin as a possible simulation driver.  
+  Current implementation does **not** do that:
+  - PP resin is benchmark context only,
+  - used for quote-vs-market risk and GLM explanation,
+  - not a Monte Carlo material-price path driver.
+- The earlier blueprint implied database-centric persistence.  
+  Current implementation is mostly:
+  - local JSON snapshots,
+  - raw artifact files,
+  - uploaded PDF files,
+  - in-memory quote states and in-memory analysis run results.
+
+### 2.3 Removed / Not Actually Present
+
+- No `ingest_orchestrator_service.py`
+- No `ready` endpoint
+- No queue/worker stack
+- No real event bus
+- No direct WorldFirst execution path
+- No generalized snapshot approval/promotion manifest layer
+- No persistent database-backed analysis run store in active use
+
+---
+
+## 3. Architecture Intent As Implemented
+
+LintasNiaga is not a general chatbot and not a frontend-driven dashboard.
+
+It is a **FastAPI-owned procurement workflow system** where the backend is the source of truth for:
+
+- quote extraction and repair,
+- snapshot refresh and normalization,
+- deterministic landed-cost and risk calculations,
+- Monte Carlo fan-chart generation,
+- GLM reasoning orchestration,
+- traceability metadata,
+- and final recommendation assembly.
+
+The main architectural qualities currently optimized are:
+
+- judge/demo stability,
+- explicit provenance,
 - bounded AI behavior,
-- modular data ingestion,
-- and fast implementation in hackathon conditions.
+- traceability,
+- source separation,
+- and explainable failure.
 
 ---
 
-## 2. High-Level Architecture Principles
+## 4. High-Level Runtime Topology
 
-These principles are treated as non-negotiable.
+### 4.1 Core Components
 
-1. **FastAPI is the system backbone.**
-2. **The backend owns the workflow, not the browser.**
-3. **The workflow is sequential by default.**
-4. **Quote prep and analysis are logically separate stages.**
-5. **Ingestion refresh and quote analysis are logically separate concerns.**
-6. **Validation gates analysis.**
-7. **Deterministic math runs before AI reasoning.**
-8. **LangGraph remains thin and bounded.**
-9. **Provider adapters isolate third-party dependencies.**
-10. **Snapshots are consumed at analysis time; raw scraping is not.**
-11. **Fallback logic is centralized.**
-12. **Frontend never becomes the source of truth.**
+- **Frontend:** Next.js web app in `apps/web`
+- **Backend:** FastAPI app in `apps/api`
+- **AI orchestration:** LangGraph-style thin reasoning flow in `ai_orchestrator_service.py`
+- **Model provider:** GLM provider wrapper in `llm_provider.py`
+- **Tracing:** Langfuse for AI traces and now Monte Carlo span traces
+- **Persistence:** local filesystem JSON + raw artifacts + uploaded PDFs + in-memory run state
 
----
+### 4.2 External Source Adapters
 
-## 3. System Context
+- `yfinance_provider.py`
+  - FX history
+  - Brent crude history via `BZ=F`
+- `openweather_provider.py`
+  - attempts longest available forecast endpoint for the configured key
+- `opendosm_provider.py`
+  - Industrial Production Index
+  - Malaysia trade data
+- `gnews_provider.py`
+  - bucketed article fetching across logistics, finance, and geopolitical queries
+- `sunsirs_provider.py`
+  - PP benchmark page fetch plus challenge handling
 
-### 3.1 Core Topology
-
-- **Frontend:** Next.js app
-- **Backend:** FastAPI app
-- **AI orchestration:** thin LangGraph layer inside backend
-- **Local persistence:** SQLite + JSON + local disk
-- **Hosted persistence later:** Supabase Postgres + Supabase Storage
-- **External ingestion-facing services:**
-  - FX and energy source adapter (`yfinance` in hackathon mode)
-  - OpenWeatherMap
-  - OpenDOSM / data.gov.my
-  - GNews
-  - curated web pages for PP resin benchmark extraction
-- **AI / runtime services:**
-  - extraction + reasoning model provider
-  - observability provider
-
-### 3.2 Context Diagram
+### 4.3 Context Diagram
 
 ```text
 [User]
@@ -91,1156 +152,550 @@ These principles are treated as non-negotiable.
    v
 [Next.js Web App]
    |
-   | REST / SSE
+   | REST + SSE
    v
-[FastAPI Application]
+[FastAPI]
    |
-   |-- [Quote Prep Services]
-   |-- [Snapshot Ingestion Services]
-   |-- [Deterministic Analysis Services]
-   |-- [Thin LangGraph AI Layer]
-   |-- [Persistence Layer]
+   |-- Quote upload / repair
+   |-- Ingest endpoints
+   |-- Snapshot read endpoints
+   |-- Analysis run orchestration
+   |-- Hedge simulation
+   |-- Bank instruction drafting
+   |-- Traceability endpoint
    |
-   |---> [LLM Provider / Vision / Reasoning]
-   |---> [yfinance Adapter]
-   |---> [OpenWeatherMap]
-   |---> [OpenDOSM / data.gov.my]
-   |---> [GNews]
-   |---> [Curated Web Pages -> Trafilatura]
-   |---> [Langfuse]
+   |---> GLM model provider
+   |---> Langfuse
+   |---> yfinance
+   |---> OpenWeather
+   |---> OpenDOSM
+   |---> GNews
+   |---> SunSirs
    |
-   |---> [SQLite]
-   |---> [Local JSON Reference Repository]
-   |---> [Snapshot Store]
-   |---> [Raw Artifact Store]
-   |---> [Local Disk / Supabase Storage]
+   |---> data/reference
+   |---> data/snapshots
+   |---> data/raw
+   |---> apps/api/uploads
+   |
+   |---> in-memory quote states
+   |---> in-memory analysis run results
 ```
 
-### 3.3 Architecture Delta vs Previous Blueprint
+---
 
-The earlier blueprint assumed:
+## 5. Core Architectural Principles That Are Actually True Today
 
-- static JSON reference data,
-- BNM-centered live FX,
-- no first-class ingestion subsystem,
-- and analysis-centric data loading only. fileciteturn25file0
-
-The updated architecture keeps the same **backend-owned, deterministic-first** philosophy, but adds:
-
-- a dedicated **snapshot ingestion subsystem**,
-- provider adapters for external sources,
-- raw artifact persistence for debugging,
-- normalized snapshots as the only analysis-facing external-data input,
-- and updated source boundaries aligned with the new PRD and build plan.
+1. **FastAPI is the workflow owner.**
+2. **The browser is a client, not the decision engine.**
+3. **Deterministic math still runs before final AI recommendation assembly.**
+4. **External data enters analysis only through normalized snapshot shapes.**
+5. **Some critical datasets are refreshed immediately before analysis rather than trusted blindly.**
+6. **PP resin is benchmark evidence, not a Monte Carlo stochastic driver.**
+7. **Langfuse traceability is first-class for AI calls and partially extended to numeric simulation.**
+8. **The current system prefers strict failure over silent fake fallback in the main analysis path.**
+9. **State persistence is still mostly file-backed and memory-backed, not fully database-backed.**
 
 ---
 
-## 4. Option Review and Final Architecture Decisions
+## 6. Real Workflow Architecture
 
-This section captures the main architectural options and the chosen default.
+### 6.1 Workflow A: Quote Intake and Repair
 
-### 4.1 Overall Execution Model
+**Entry points**
 
-**Options**
-- A. One backend-owned orchestrator workflow per analysis run plus a separate backend-owned ingestion refresh flow
-- B. Browser chains multiple backend calls step by step
-- C. Event-driven / queued pipeline from day one
+- `POST /quotes/upload`
+- `POST /quotes/{quote_id}/repair`
+- `GET /quotes/{quote_id}`
 
-**Chosen:** A
+**Actual behavior**
 
-**Reasoning**
-- Keeps workflow control in one place.
-- Keeps failures, retries, traces, and recommendation assembly centralized.
-- Prevents the browser from becoming an accidental workflow engine.
-- Adds ingestion without forcing a queue/worker stack on day one.
+1. Save uploaded PDF to `apps/api/uploads`
+2. Extract text from the first two PDF pages if possible
+3. Try deterministic text parsing first
+4. If text extraction is insufficient, render page images and call GLM vision extraction
+5. Merge page-level quote candidates into one structured quote
+6. Validate quote fields with `quote_validation_service`
+7. Store resulting `QuoteState` in the in-memory `QUOTE_STATES` dictionary
 
----
+**Important current truth**
 
-### 4.2 Top-Level Pipeline Shape
+- Quote upload state is not persisted in SQLite or Postgres.
+- Extraction trace URLs and trace IDs are stored on the in-memory `QuoteState`.
 
-**Options**
-- A. Strict sequential stages
-- B. Partially parallel by default
-- C. Dynamic agent chooses order
+### 6.2 Workflow B: Snapshot Ingestion
 
-**Chosen:** A
+**Entry points**
 
-**Reasoning**
-- The major workflows are naturally stage-based.
-- Easier to trace, test, and explain.
-- Parallelism can be introduced later inside isolated ingestion steps if needed.
+- `POST /ingest/reference/load`
+- `POST /ingest/market/fx`
+- `POST /ingest/market/energy`
+- `POST /ingest/market/energy/ensure-fresh`
+- `POST /ingest/holidays`
+- `POST /ingest/holidays/ensure-fresh`
+- `POST /ingest/weather`
+- `POST /ingest/macro`
+- `POST /ingest/macro/ipi`
+- `POST /ingest/macro/trade`
+- `POST /ingest/news/gnews`
+- `POST /ingest/news/gnews/ensure-fresh`
+- `POST /ingest/resin/sunsirs`
+- `POST /ingest/resin/sunsirs/ensure-fresh`
 
----
+**Actual behavior**
 
-### 4.3 Macro Workflow Split
+1. Provider fetches external data
+2. Service normalizes into internal records
+3. Snapshot envelope is created
+4. Snapshot is written through `snapshot_repository`
+5. Some services also write raw artifacts
 
-**Options**
-- A. Three backend workflows: Quote Prep, Snapshot Ingestion, Analysis
-- B. One giant workflow covering everything
-- C. Frontend handles prep and some data loading
+**Important current truth**
 
-**Chosen:** A
+- Snapshot freshness policy is service-specific.
+- `snapshot_repository.write_snapshot(... keep_history=False)` is widely used for latest-only refresh flows.
+- Macro snapshots still keep history by default.
 
-**Reasoning**
-- Quote extraction/repair, external data refresh, and procurement analysis have different lifecycle rules.
-- Avoids scraping or source-refresh logic contaminating quote comparison requests.
-- Makes persistence, retry, caching, and UX clearer.
+### 6.3 Workflow C: Analysis
 
----
+**Entry point**
 
-### 4.4 Quote Extraction Placement
+- `POST /analysis/run`
 
-**Options**
-- A. Dedicated first-class backend stage
-- B. Mixed into analysis later
-- C. Mostly on frontend
+**Actual current sequence**
 
-**Chosen:** A
+1. Load reference data
+2. Identify required non-MYR currencies from valid quotes
+3. Refresh and validate:
+   - FX snapshots for quote currencies
+   - Brent energy snapshot
+   - OpenDOSM IPI snapshot
+   - OpenDOSM trade snapshot
+   - GNews snapshot
+   - SunSirs resin snapshot
+   - OpenWeather snapshot
+   - holidays snapshot
+4. Run legacy FX simulation summaries with `fx_service.py` for context and benchmark conversion
+5. Run real landed-cost Monte Carlo with `fx_simulation_service.py`
+6. Build deterministic landed-cost results and ranking
+7. Build structured AI context including:
+   - tariff reference
+   - freight reference by quote
+   - oil snapshot summary
+   - macro context
+   - news events
+   - resin benchmark and quote-vs-market risk
+   - holiday context
+   - weather context
+   - risk-driver breakdown
+   - selected Monte Carlo scenario summary
+8. Call bounded GLM reasoning flow
+9. Require captured Langfuse trace URL
+10. Assemble final recommendation payload
+11. Cache result in in-memory run dictionaries
 
-**Reasoning**
-- Keeps PDF understanding separate from recommendation logic.
-- Preserves a clean boundary: raw file -> structured quote -> validated quote.
+### 6.4 Workflow D: Hedge Replay
 
----
+**Entry point**
 
-### 4.5 Snapshot Ingestion Placement
+- `POST /analysis/{run_id}/hedge-simulate`
 
-**Options**
-- A. Dedicated backend ingestion subsystem producing normalized snapshots
-- B. Fetch external data ad hoc inside each analysis request
-- C. Frontend fetches some source data itself
+**Actual behavior**
 
-**Chosen:** A
+- Reuses stored quote/run context
+- Rebuilds FX+oil scenario for the winning quote
+- Uses the same run seed so hedge narrows existing shocks instead of rerolling a new future
 
-**Reasoning**
-- Protects demo stability.
-- Makes snapshot freshness explicit.
-- Supports source-specific retry and validation.
-- Prevents raw scraping and external HTTP variability from entering the analysis request path.
+### 6.5 Workflow E: Bank Instruction Draft
 
----
+**Entry point**
 
-### 4.6 Validation Gate
+- `POST /analysis/{run_id}/bank-instruction-draft`
 
-**Options**
-- A. Hard validation gate before analysis
-- B. Partial analysis first, validate later
-- C. Validate only at the end
+**Actual behavior**
 
-**Chosen:** A
-
-**Reasoning**
-- Prevents the engine from calculating on malformed or unsupported quote data.
-- Enables the repair flow and partial-exclusion flow cleanly.
-
----
-
-### 4.7 Deterministic Engine Placement
-
-**Options**
-- A. Deterministic services outside LangGraph
-- B. Put all math and rules inside LangGraph nodes
-- C. Split some rules into frontend
-
-**Chosen:** A
-
-**Reasoning**
-- Makes the rules and math auditable.
-- Keeps unit testing simple.
-- Prevents the AI layer from becoming the owner of truth.
-
----
-
-### 4.8 AI Reasoning Placement
-
-**Options**
-- A. AI runs after deterministic outputs are available
-- B. AI reasons first, then math follows
-- C. AI and math are interleaved throughout
-
-**Chosen:** A
-
-**Reasoning**
-- AI should reason over trusted structured state.
-- Deterministic outputs become grounding context for recommendation and explanation.
+- Reuses selected quote and hedge scenario
+- Builds deterministic fallback draft first
+- Calls GLM for strict JSON wording only
+- Returns fallback draft if the LLM step fails
 
 ---
 
-### 4.9 Data Loading and Fallback Strategy
+## 7. Dataset-by-Dataset Ingestion Truth
 
-**Options**
-- A. Centralized data stage loads anchors + latest snapshots + fallback logic before compute
-- B. Each service fetches its own data ad hoc
-- C. Frontend provides context
+### 7.1 FX
 
-**Chosen:** A
+- Source: `yfinance`
+- Storage key: `fx/{PAIR}`
+- Analysis behavior:
+  - refreshed on demand before analysis,
+  - required to be `success`,
+  - required to have at least 30 rows.
 
-**Reasoning**
-- Makes failover deterministic.
-- Prevents inconsistent source behavior.
-- Keeps the hybrid anchor/snapshot model explicit.
+### 7.2 Energy / Oil
 
----
+- Source: `yfinance`
+- Storage key: `energy/BZ=F`
+- Used for:
+  - freight/oil correlation in Monte Carlo
+  - GLM context note about Brent move
 
-### 4.10 Persistence Checkpoints
+### 7.3 Weather
 
-**Options**
-- A. Persist key checkpoints only
-- B. Persist only final result
-- C. Persist every tiny internal state mutation
+- Source: OpenWeather
+- Storage key: `weather`
+- Current role:
+  - cleaned port forecast summaries,
+  - derived max port risk scores,
+  - converted into `0/3/5/7` weather delay days for Monte Carlo,
+  - included in GLM context and risk notes.
+- Current refresh behavior:
+  - refreshed during analysis,
+  - manual ingest endpoint exists,
+  - no background scheduler in `main.py`.
 
-**Chosen:** A
+### 7.4 Holidays
 
-**Reasoning**
-- Gives enough observability and recovery without building an event-sourcing system.
+- Source: `python-holidays`
+- Storage key: `holidays`
+- Current role:
+  - rolling holiday calendar for MY/CN/TH/ID,
+  - holiday window included in GLM context,
+  - converted into capped holiday buffer days for Monte Carlo.
+- Refresh behavior:
+  - daily background refresh,
+  - analysis also ensures freshness.
 
-**Checkpoint set**
-1. upload created
-2. extraction completed
-3. validation result saved
-4. snapshot refresh completed (per dataset)
-5. analysis run started
-6. final recommendation saved
+### 7.5 OpenDOSM Macro
 
----
+- Source: OpenDOSM/data.gov.my
+- Storage keys:
+  - `macro`
+  - `macro_trade`
+- Current role:
+  - GLM context,
+  - risk-driver breakdown input,
+  - not directly part of the stochastic Monte Carlo math.
+- Refresh behavior:
+  - refreshed during analysis,
+  - manual ingest endpoints exist,
+  - no background scheduler in `main.py`.
 
-### 4.11 Long-Running Interaction Model
+### 7.6 GNews
 
-**Options**
-- A. POST creates run; frontend subscribes to status/result stream where needed
-- B. One blocking request waits for everything
-- C. Queue/worker architecture from day one
+- Source: GNews API or RSS-backed provider mode depending on configuration
+- Storage key: `news`
+- Current role:
+  - normalized article buckets,
+  - context for GLM,
+  - risk-driver notes,
+  - not a hidden direct Monte Carlo coefficient in the new FX+oil simulator.
+- Refresh behavior:
+  - hourly background refresh,
+  - analysis also ensures freshness.
 
-**Chosen:** A
+### 7.7 PP Resin Benchmark
 
-**Reasoning**
-- Allows progress UX without introducing a full worker stack.
-- Keeps API ownership on the backend.
-
----
-
-### 4.12 Streaming Scope
-
-**Options**
-- A. No streaming
-- B. Stream only analyst/status output
-- C. Make the whole system realtime-first
-
-**Chosen:** B
-
-**Reasoning**
-- Only the AI Analyst panel and perhaps ingest status truly benefit from progressive output.
-- The rest of the product remains request/response.
-
----
-
-### 4.13 Internal Service Decomposition
-
-**Options**
-- A. Separate backend services by responsibility
-- B. One giant analysis service
-- C. Microservices from day one
-
-**Chosen:** A
-
-**Reasoning**
-- Gives modularity without operational overhead.
-- Keeps service ownership clear.
-
----
-
-### 4.14 Recommendation Assembly Authority
-
-**Options**
-- A. One backend recommendation assembler merges numeric engine + bounded AI output
-- B. AI decides final recommendation directly
-- C. Frontend merges ranking and AI explanation
-
-**Chosen:** A
-
-**Reasoning**
-- Preserves the numeric engine as primary authority.
-- Enforces bounded AI behavior.
-- Produces one canonical response object.
+- Source: SunSirs
+- Storage key: `resin`
+- Raw artifacts:
+  - HTML written through `RawRepository`
+  - extracted text written through `RawRepository`
+- Current role:
+  - latest benchmark context,
+  - quote-vs-market premium/discount classification,
+  - GLM explanation support,
+  - not part of the Monte Carlo path generator.
+- Refresh behavior:
+  - daily background refresh,
+  - analysis also ensures freshness.
 
 ---
 
-### 4.15 Error Model
+## 8. Monte Carlo Architecture As Implemented
 
-**Options**
-- A. Stage-specific typed failures
-- B. Generic 500s only
-- C. Silent degradation with little explanation
+The main fan chart is no longer the older “risk-driver multiplier” approximation alone.
 
-**Chosen:** A
+### 8.1 Current Main Simulator
 
-**Reasoning**
-- This product needs explainable failure, not only explainable success.
-- Supports better repair UX and easier debugging.
+`fx_simulation_service.py`
 
----
+It uses:
 
-### 4.16 Queue / Background Job Posture
+- quote currency FX snapshot,
+- `USDMYR` snapshot for freight conversion,
+- Brent snapshot for oil-linked freight surcharge,
+- historical log returns,
+- FX-oil correlation,
+- deterministic seed replay per run,
+- hedge ratio as partial locking of quote FX exposure.
 
-**Options**
-- A. No real queue initially; lightweight background tasks only if needed
-- B. Celery/Redis from the start
-- C. Full event bus / worker fleet
+### 8.2 Current Inputs
 
-**Chosen:** A
+- quote data
+- quantity in MT
+- weather delay days
+- holiday buffer days
+- freight reference
+- tariff rule
+- supplier reliability
+- FX and oil snapshots
 
-**Reasoning**
-- Keeps hackathon complexity low.
-- A proper worker stack is only justified if ingestion or analysis times become a real bottleneck.
+### 8.3 Current Outputs
 
----
+- daily p10/p50/p90 bands
+- distribution at delivery
+- material / freight / tariff p50 breakdown
+- hedge-adjusted scenarios
+- scenario objects consumed by the frontend analysis result page
 
-### 4.17 Hosted Runtime Topology
+### 8.4 Important Boundary
 
-**Options**
-- A. Web and API are separate; web talks only to API; API talks to storage/providers
-- B. Web sometimes talks directly to providers/storage
-- C. All-in-one deploy with blurred boundaries
+The new simulator is grounded in FX and oil market history.  
+Macro/news/weather/holidays/resin still inform:
 
-**Chosen:** A
+- refresh policy,
+- delay inputs,
+- benchmark checks,
+- risk-driver explanation,
+- and GLM reasoning,
 
-**Reasoning**
-- Preserves the backend as the only business logic authority.
-- Prevents direct frontend bypasses around validation, logging, snapshot policy, or fallback rules.
-
----
-
-## 5. Architecture Layers
-
-### 5.1 Layer 1 — UI Layer (Next.js)
-
-**Responsibilities**
-- file upload UI
-- quote repair form UI
-- comparison workspace UI
-- recommendation card UI
-- backup option UI
-- analyst panel UI
-- FX fan chart UI
-- hedge slider UI
-- loading/error states
-- optional ingest-status visibility for debugging/admin mode
-
-**Not responsible for**
-- business truth
-- ranking logic
-- simulation logic
-- fallback logic
-- source fetching logic
-- recommendation assembly
+but they are not all encoded as arbitrary hidden stochastic coefficients.
 
 ---
 
-### 5.2 Layer 2 — API/Application Layer (FastAPI)
+## 9. Persistence Architecture Truth
 
-**Responsibilities**
-- receive requests
-- create quote-prep runs, ingest runs, and analysis runs
-- coordinate workflow stages
-- expose REST endpoints
-- expose SSE streaming endpoints where needed
-- coordinate persistence and final response delivery
+### 9.1 What Is Persisted to Disk
 
-**Rule**
-Route handlers stay thin.
+- uploaded PDFs in `apps/api/uploads`
+- reference JSON under `data/reference`
+- snapshots under `data/snapshots`
+- raw artifacts under `data/raw`
 
----
+### 9.2 What Is In Memory
 
-### 5.3 Layer 3 — Domain / Service Layer
+- `QUOTE_STATES` in `quote_ingest_service.py`
+- `_run_contexts` in `analysis_run_service.py`
+- `_run_results` in `analysis_run_service.py`
+- `_run_monte_carlo_inputs` in `analysis_run_service.py`
 
-This is the real logic center.
+### 9.3 What Exists but Is Not the Main Runtime Store
 
-**Quote Services**
-- `quote_ingest_service`
-- `quote_validation_service`
-
-**Ingestion Services**
-- `reference_data_service`
-- `market_data_service`
-- `weather_risk_service`
-- `holiday_service`
-- `macro_data_service`
-- `news_event_service`
-- `resin_benchmark_service`
-- `ingest_orchestrator_service`
-
-**Analysis Services**
-- `fx_service`
-- `cost_engine_service`
-- `recommendation_engine_service`
-- `analysis_run_service`
-- `recommendation_assembler_service`
-
-**AI Services**
-- `ai_orchestrator_service`
-- `context_builder_service`
+- `core/config.py` still defines SQLite-related configuration
+- current main runtime behavior does not use SQLite as the authoritative analysis state store
 
 ---
 
-### 5.4 Layer 4 — Infrastructure / Provider Layer
+## 10. Provider and Repository Boundaries
 
-**Responsibilities**
-- local disk / storage access
-- SQLite access
-- JSON repository access
-- snapshot repository access
-- raw artifact repository access
-- LLM provider wrapper
-- `yfinance` adapter
-- OpenWeatherMap client wrapper
-- OpenDOSM/data.gov.my client wrapper
-- GNews provider wrapper
-- Trafilatura wrapper
-- Langfuse trace wrapper
-- structured logging
-
----
-
-## 6. Core Workflows
-
-## 6.1 Workflow A — Quote Prep
-
-### Purpose
-Turn uploaded PDFs into validated structured quotes.
-
-### Stages
-1. Create quote-prep run
-2. Save uploaded PDF to local disk (or storage later)
-3. Call extraction model
-4. Normalize output into internal quote schema
-5. Validate against required fields and scope
-6. Persist validation result
-7. Return:
-   - valid quote
-   - invalid quote with reasons
-   - fixable fields
-
-### Output states
-- `valid`
-- `invalid_fixable`
-- `invalid_out_of_scope`
-
-### Notes
-This workflow may run for each file independently.
-
----
-
-## 6.2 Workflow B — Snapshot Ingestion
-
-### Purpose
-Refresh external market/logistics context and convert it into normalized local snapshots.
-
-### Stages
-1. Create ingest job
-2. Load source config and required anchors
-3. Fetch external source data through provider adapters
-4. Normalize to internal contracts
-5. Validate records
-6. Save raw artifacts where relevant
-7. Save snapshot envelope
-8. Persist job result and warnings
-
-### Output states
-- `success`
-- `partial`
-- `failed`
-
-### Phase 1 datasets
-- reference anchors
-- FX
-- energy
-- holidays
-
-### Phase 2+ datasets
-- weather risk
-- OpenDOSM macro context
-- GNews event context
-- PP resin benchmark
-
----
-
-## 6.3 Workflow C — Analysis
-
-### Purpose
-Compare valid quotes and produce one canonical recommendation object.
-
-### Preconditions
-- required quantity present
-- urgency present
-- at least one quote valid
-
-### Stages
-1. Create analysis run
-2. Load valid quotes
-3. Enforce comparison assumptions
-4. Load reference anchors and latest approved snapshots
-5. Run deterministic cost engine
-6. Run ranking engine
-7. Build AI context package
-8. Run thin LangGraph reasoning flow
-9. Merge deterministic and AI outputs
-10. Persist final result
-11. Return result / stream analyst output
-
----
-
-## 6.4 Workflow D — Single-Quote Fallback
-
-### Trigger
-Exactly one valid quote remains after validation.
-
-### Behavior
-Switch from comparison mode to single-quote evaluation mode.
-
-### Outputs
-- Proceed
-- Review carefully
-- Do not recommend
-
-### Important rule
-The system must not pretend a multi-quote comparison happened.
-
----
-
-## 7. Stage-by-Stage Analysis Pipeline
-
-### Stage 1 — Request Intake
-
-**Input**
-- quote IDs or uploaded files
-- required quantity
-- urgency
-- optional hedge preference
-
-**Responsibility**
-- basic request validation
-- create run record
-
----
-
-### Stage 2 — Validation Gate
-
-**Responsibility**
-- ensure at least required quote structure exists
-- reject unsupported product / corridor / incoterm
-- classify quotes into valid vs invalid buckets
-
-**Output**
-- valid quotes list
-- invalid quotes list with reasons
-
----
-
-### Stage 3 — Data Preparation
-
-**Responsibility**
-- load freight data
-- load tariff data
-- load market/event/risk snapshots
-- load supplier seed data
-- select latest approved snapshot version per dataset
-- invoke fallback strategy if critical snapshot is stale or missing
-
-**Rule**
-The analysis stage must never scrape arbitrary sites or fetch raw article pages.
-
----
-
-### Stage 4 — Deterministic Engine
-
-**Responsibility**
-- hard costs
-- MOQ penalty
-- supplier trust penalty
-- probabilistic FX outputs
-- ranking base score
-- lead-time/disruption adjustments where applicable
-
-**Outputs**
-- p10 / p50 / p90
-- normalized per-ton cost
-- total landed cost for buyer-required quantity
-- base ranking
-
----
-
-### Stage 5 — AI Reasoning Layer
-
-**Responsibility**
-- interpret market and timing context
-- generate analyst explanation
-- support bounded recommendation adjustment
-- produce plain-language reasons and caveat
-
-**Rule**
-The AI layer may not invent unsupported data and may only adjust within backend guardrails.
-
----
-
-### Stage 6 — Recommendation Assembly
-
-**Responsibility**
-Produce one canonical response object.
-
-**Canonical recommendation object**
-- mode: comparison or single-quote
-- recommended supplier or quote status
-- lock now / wait
-- hedge percentage
-- top 3 reasons
-- optional caveat
-- backup option if comparison mode
-- why-not-the-others summaries
-- impact summary
-- snapshot freshness metadata (internal or judge/debug surface)
-
----
-
-### Stage 7 — Persistence + Delivery
-
-**Responsibility**
-- persist final run result
-- stream analyst text if enabled
-- return final payload to frontend
-
----
-
-## 8. Snapshot Ingestion Architecture
-
-## 8.1 Design Principle
-
-External sources are not analysis-time truth.  
-**Normalized snapshots are analysis-time truth.**
-
-This means:
-- ingestion is allowed to be imperfect, retried, or partially stale,
-- while analysis remains deterministic, bounded, and stable.
-
-## 8.2 Snapshot Classes
-
-### A. Reference Anchors
-Static JSON:
-- freight matrix
-- tariff rules
-- port coordinates
-- curated scrape source registry
-
-### B. Generated Snapshots
-Refreshed by backend jobs:
-- FX
-- energy
-- holidays
-- weather risk
-- OpenDOSM macro context
-- news-derived event context
-- PP resin benchmark
-
-### C. Raw Artifacts
-Debug/provenance storage:
-- raw OpenDOSM downloads
-- raw GNews result sets
-- raw resin HTML pages
-- extracted resin text
-
-## 8.3 Common Snapshot Envelope
-
-All ingestion datasets must use the same envelope:
-
-```json
-{
-  "dataset": "string",
-  "source": "string",
-  "fetched_at": "ISO-8601 timestamp",
-  "as_of": "YYYY-MM-DD or null",
-  "status": "success | partial | failed",
-  "record_count": 0,
-  "data": []
-}
-```
-
-## 8.4 Snapshot Promotion Rule
-
-A dataset may become the active snapshot only if:
-- fetch succeeded or partially succeeded in an acceptable way,
-- normalization succeeded,
-- validation rules passed,
-- and freshness metadata is captured.
-
-## 8.5 Last-Known-Good Policy
-
-If refresh fails for a non-critical dataset:
-- keep last valid snapshot,
-- mark freshness/staleness,
-- continue analysis if allowed by policy.
-
----
-
-## 9. Provider Adapter Architecture
-
-## 9.1 Why Adapters Exist
-
-Provider adapters isolate:
-- third-party library quirks,
-- API semantics,
-- credentials,
-- retries,
-- and response-shape changes.
-
-Services must not consume raw provider payloads directly.
-
-## 9.2 Required Adapters
+### 10.1 Providers Present
 
 - `llm_provider.py`
 - `yfinance_provider.py`
 - `openweather_provider.py`
 - `opendosm_provider.py`
 - `gnews_provider.py`
-- `trafilatura_client.py`
+- `sunsirs_provider.py`
+- `holiday_provider.py`
 
-## 9.3 Adapter Contract Rule
+### 10.2 Repositories Present
 
-Every adapter should:
-- return normalized internal shapes,
-- hide raw SDK/client complexity,
-- raise typed provider errors,
-- avoid leaking source-specific object models into services.
+- `reference_repository.py`
+- `snapshot_repository.py`
+- `raw_repository.py`
 
----
+### 10.3 Current Boundary Rule
 
-## 10. Repositories and Data Access
+The code mostly respects provider/repository boundaries, with services owning:
 
-## 10.1 Repository Types
+- normalization,
+- freshness policy,
+- and transformation into analysis-ready structures.
 
-### `reference_repository`
-Loads and validates static anchors.
-
-### `snapshot_repository`
-Reads/writes latest normalized snapshots.
-
-### `raw_repository`
-Reads/writes raw artifacts for provenance/debugging.
-
-## 10.2 Core Rule
-
-Services should never read files directly.  
-All file and snapshot access must go through repositories.
-
-## 10.3 Why
-
-This prevents:
-- duplicate file logic,
-- inconsistent fallback behavior,
-- silent schema drift,
-- and future migration pain when moving to hosted storage.
+That part of the original architecture remains correct.
 
 ---
 
-## 11. Suggested Internal Data Models
+## 11. Current API Surface
 
-These are conceptual architecture entities, not exact code.
+### Health
 
-### 11.1 QuoteUpload
-- upload_id
-- filename
-- storage_path
-- uploaded_at
-- status
+- `GET /health`
+- `GET /health/langfuse`
 
-### 11.2 ExtractedQuote
-- quote_id
-- upload_id
-- supplier_name
-- origin_port_or_country
-- incoterm
-- unit_price
-- currency
-- moq
-- lead_time_days
-- extraction_confidence_optional
+### Quotes
 
-### 11.3 QuoteValidationResult
-- quote_id
-- status
-- reason_codes
-- missing_fields
-- user_corrected_fields
-
-### 11.4 IngestJob
-- job_id
-- dataset
-- source
-- started_at
-- completed_at
-- status
-- warnings
-
-### 11.5 SnapshotManifest
-- dataset
-- source
-- as_of
-- fetched_at
-- status
-- record_count
-- storage_path
-- freshness_state
-
-### 11.6 AnalysisRun
-- run_id
-- valid_quote_ids
-- quantity
-- urgency
-- hedge_preference
-- run_status
-- started_at
-- completed_at
-
-### 11.7 RecommendationResult
-- run_id
-- mode
-- winner_quote_id_optional
-- backup_quote_id_optional
-- timing_recommendation
-- hedge_percent
-- reasons
-- caveat_optional
-- p10
-- p50
-- p90
-- impact_summary
-
----
-
-## 12. Error and Fallback Architecture
-
-## 12.1 Typed Failure Categories
-
-Recommended architecture-level error types:
-
-- `ExtractionFailed`
-- `ValidationFailed`
-- `UnsupportedScope`
-- `ExternalFetchFailed`
-- `NormalizationFailed`
-- `SnapshotWriteFailed`
-- `SnapshotStaleUsingLastValid`
-- `NoValidQuotes`
-- `SingleValidQuoteFallback`
-- `ComputationFailed`
-- `AIReasoningFailedFallbackToDeterministic`
-
-## 12.2 Failure Strategy
-
-- Fail early at the validation boundary.
-- Continue with valid quotes when partial failure is acceptable.
-- Surface human-readable repair actions.
-- Never fabricate missing critical data.
-- If a non-critical source refresh fails, use last valid snapshot if policy permits.
-- Keep scraping failures isolated from live comparison requests.
-
----
-
-## 13. API Surface Recommendation
-
-The exact endpoint names may vary, but the shape should stay like this.
-
-### Quote Prep
-- `POST /quote-uploads`
-- `GET /quote-uploads/{upload_id}`
+- `POST /quotes/upload`
+- `GET /quotes/{quote_id}`
 - `POST /quotes/{quote_id}/repair`
 
-### Ingestion
+### Ingest
+
 - `POST /ingest/reference/load`
 - `POST /ingest/market/fx`
 - `POST /ingest/market/energy`
+- `POST /ingest/market/energy/ensure-fresh`
 - `POST /ingest/holidays`
-- `POST /ingest/weather/ports`
-- `POST /ingest/macro/opendosm`
+- `POST /ingest/holidays/ensure-fresh`
+- `POST /ingest/weather`
+- `POST /ingest/macro`
+- `POST /ingest/macro/ipi`
+- `POST /ingest/macro/trade`
 - `POST /ingest/news/gnews`
-- `POST /ingest/resin/scrape`
-- `POST /ingest/run/daily`
-- `GET /ingest/status/{job_id}`
-- `GET /snapshots/latest/{dataset}`
+- `POST /ingest/news/gnews/ensure-fresh`
+- `POST /ingest/resin/sunsirs`
+- `POST /ingest/resin/sunsirs/ensure-fresh`
+
+### Snapshots
+
+- `GET /snapshots/latest/fx`
+- `GET /snapshots/latest/macro`
+- `GET /snapshots/latest/news`
+- `GET /snapshots/latest/weather`
+- `GET /snapshots/latest/resin`
 
 ### Analysis
-- `POST /analysis-runs`
-- `GET /analysis-runs/{run_id}`
-- `GET /analysis-runs/{run_id}/stream`
-- `POST /analysis-runs/{run_id}/hedge-scenarios`
 
-### Health / Infra
-- `GET /health`
-- `GET /ready`
-
-### API Style Rule
-- REST by default
-- SSE only for analyst/status streaming
+- `POST /analysis/run`
+- `GET /analysis/{run_id}`
+- `GET /analysis/{run_id}/stream`
+- `GET /analysis/{run_id}/traceability`
+- `POST /analysis/{run_id}/hedge-simulate`
+- `POST /analysis/{run_id}/bank-instruction-draft`
 
 ---
 
-## 14. Frontend-Backend Interaction Model
+## 12. Frontend-Backend Contract Reality
 
-## 14.1 Quote Prep UX
+The frontend is still thin in the intended sense:
 
-1. User uploads PDFs
-2. Frontend sends files to FastAPI
-3. FastAPI stores files and runs extraction
-4. Frontend receives quote prep results
-5. User fixes invalid/incomplete quotes if needed
+- it uploads PDFs,
+- triggers one analysis run,
+- renders the returned result payload,
+- requests hedge recalculation,
+- requests bank instruction draft JSON,
+- and displays Langfuse trace links and explanation panels.
 
-## 14.2 Analysis UX
+The backend still owns:
 
-1. User enters required quantity and urgency
-2. Frontend sends one analysis request
-3. Backend owns the full pipeline
-4. Backend loads latest approved snapshots internally
-5. Frontend subscribes to run status / analyst stream if needed
-6. Frontend renders final recommendation object
+- ranking,
+- simulation,
+- risk derivation,
+- and AI recommendation grounding.
 
-## 14.3 Ingestion UX
-
-This is optional for normal users and may be hidden or admin/debug only.
-
-1. User/developer triggers an ingest refresh or scheduled refresh runs
-2. Backend fetches, normalizes, validates, and stores snapshots
-3. Backend returns ingest status and any warnings
-4. Analysis later consumes the latest approved snapshots
+That architectural boundary remains valid.
 
 ---
 
-## 15. Observability and Tracing Architecture
+## 13. Observability and Traceability
 
-## 15.1 Langfuse
+### 13.1 Langfuse
 
-Use for:
-- AI traces
-- model calls
-- tool/use-step traces
-- reasoning workflow observability
-- optionally resin benchmark extraction chain observability
+Currently used for:
 
-## 15.2 Structured App Logs
+- quote extraction traces,
+- recommendation reasoning traces,
+- streamed analyst explanation traces,
+- simulation span traces in `fx_simulation_service.py`,
+- traceability status via `/health/langfuse`,
+- traceability visibility via `/analysis/{run_id}/traceability`.
 
-Use for:
-- upload lifecycle
-- extraction errors
-- validation failures
-- snapshot refresh failures
-- provider timeouts / warnings
-- JSON load issues
-- run lifecycle logs
-- internal exceptions
+### 13.2 Logs
 
-## 15.3 Why This Split
+Structured app logs are used for:
 
-AI traces and app/system logs serve different purposes and should remain separate.
+- background refresh loops,
+- provider failures,
+- upload/extraction issues,
+- analysis failures,
+- and fallback warnings where still applicable.
 
 ---
 
-## 16. Security and Boundary Rules
-
-Even for hackathon v1, keep these architecture boundaries clear.
-
-1. Frontend must not bypass FastAPI for core business actions.
-2. Business rules are never enforced only in the frontend.
-3. AI provider access is wrapped behind one backend provider layer.
-4. External data access is wrapped behind provider adapters.
-5. Static anchors and snapshots are only accessed through repository layers.
-6. Raw scraped content must not be treated as analysis-ready truth without normalization/validation.
-
----
-
-## 17. Recommended Folder-to-Architecture Mapping
-
-### Web
+## 14. Folder-to-Architecture Mapping (Current Truth)
 
 ```text
 apps/web/
-  app/
-  components/
-  features/
-    quote-upload/
-    quote-repair/
-    comparison/
-    recommendation/
-    analyst-panel/
-    hedge/
-  lib/
-    api/
-    schemas/
-    query/
-```
+  src/app/analysis/[id]/results/
+  src/components/
 
-### API
+apps/api/app/
+  api/routes/
+  core/
+  providers/
+  repositories/
+  schemas/
+  scrapers/
+  services/
+  main.py
 
-```text
-apps/api/
-  app/
-    main.py
-    api/
-      routes/
-        health.py
-        ingest_reference.py
-        ingest_market.py
-        ingest_weather.py
-        ingest_macro.py
-        ingest_news.py
-        ingest_resin.py
-    core/
-      config.py
-      logging.py
-      constants.py
-      exceptions.py
-    schemas/
-      reference.py
-      market.py
-      weather.py
-      macro.py
-      news.py
-      resin.py
-      common.py
-    providers/
-      yfinance_provider.py
-      openweather_provider.py
-      opendosm_provider.py
-      gnews_provider.py
-      llm_provider.py
-    scrapers/
-      trafilatura_client.py
-      resin_source_registry.py
-      resin_extractor.py
-      resin_validators.py
-    repositories/
-      reference_repository.py
-      snapshot_repository.py
-      raw_repository.py
-    services/
-      reference_data_service.py
-      market_data_service.py
-      weather_risk_service.py
-      holiday_service.py
-      macro_data_service.py
-      news_event_service.py
-      resin_benchmark_service.py
-      ingest_orchestrator_service.py
-      quote_ingest_service.py
-      quote_validation_service.py
-      fx_service.py
-      cost_engine_service.py
-      recommendation_engine_service.py
-      analysis_run_service.py
-      recommendation_assembler_service.py
-      ai_orchestrator_service.py
-    models/
-      snapshot_manifest.py
-      ingest_job.py
-    utils/
-      time.py
-      hashing.py
-      dedupe.py
-      text_cleaning.py
-```
-
-### Data Storage Layout
-
-```text
-apps/api/data/
+data/
   reference/
-    freight_rates.json
-    tariffs_my_hs.json
-    ports.json
-    source_registry.json
   snapshots/
-    fx/
-    energy/
-    weather/
-    holidays/
-    opendosm/
-    news/
-    resin/
   raw/
-    opendosm/
-    news/
-    resin_html/
-    resin_text/
-  tmp/
 ```
 
----
+### Important current note
 
-## 18. Three Review Points Worth Checking Before Build
-
-These do not block the architecture, but they are the best places for final review.
-
-### 18.1 Analyst Streaming Necessity
-Should the demo truly show progressive analyst streaming, or would stage progress + final explanation be enough?
-
-### 18.2 Ingestion Trigger Policy
-Should ingest refresh be manual-only during hackathon, or should there also be a lightweight scheduled refresh path?
-
-### 18.3 Snapshot Freshness Thresholds
-Which datasets should be treated as hard-critical vs soft-critical when stale?
+The older blueprint mentioned folders such as `models/` and services such as `ingest_orchestrator_service.py`.  
+Those are not part of the current repo architecture and should not be described as active components.
 
 ---
 
-## 19. Final Recommended Architecture Summary
+## 15. Architecture Risks and Honest Gaps
 
-LintasNiaga v1 should be implemented as a **backend-owned sequential procurement decision system** with **three core backend workflows**:
+These are real current limitations, not theoretical ones.
 
-1. **Quote Prep**
-   - upload
-   - extract
-   - normalize
-   - validate
-   - repair
+1. **Analysis state is still in memory**
+   - server restarts lose run context and quote state.
 
-2. **Snapshot Ingestion**
-   - fetch external data through adapters
-   - normalize and validate
-   - persist raw artifacts and approved snapshots
+2. **Analysis refreshes live sources before compute**
+   - this improves truthfulness,
+   - but it means analysis latency still depends on some upstream fetches.
 
-3. **Analysis**
-   - load valid quotes
-   - load reference anchors and latest snapshots
-   - compute deterministic cost/risk outputs
-   - run bounded AI reasoning
-   - assemble canonical recommendation
-   - persist and return results
+3. **Background scheduling is partial**
+   - news, holidays, and resin are scheduled,
+   - FX, energy, weather, and macro are not continuously scheduled in `main.py`.
 
-The final system should have:
-- a thin frontend,
-- a strong FastAPI backbone,
-- a thin LangGraph AI layer,
-- provider adapters for all external dependencies,
-- a snapshot store that insulates analysis from runtime scraping,
-- centralized fallback logic,
-- and strict architecture boundaries that keep math, rules, ingestion, and AI cleanly separated.
+4. **Two settings systems still coexist**
+   - `core/config.py`
+   - `core/settings.py`
 
-That is the architecture most likely to be:
-- buildable,
-- explainable,
-- debuggable,
-- and persuasive to judges.
+5. **Strict analysis can fail hard when sources are unhealthy**
+   - this is deliberate,
+   - but it is an architectural tradeoff against resilience.
 
 ---
 
-## 20. Nuances and Open Uncertainties
+## 16. Final Architecture Summary
 
-1. **FX source choice is now adapter-driven**  
-   The original architecture assumed BNM-centric FX. The new ingestion-aligned architecture assumes a swappable market-data adapter, with `yfinance` acceptable for hackathon speed and a more official source possible later.
+LintasNiaga as of 2026-04-25 is best described as a **FastAPI-owned procurement analysis system with file-backed ingestion and in-memory run orchestration**.
 
-2. **Weather must stay derived, not raw**  
-   The architecture supports weather only as a logistics-risk derivation pipeline, not as generic weather exploration.
+It currently consists of:
 
-3. **News must stay event-derived, not headline-driven**  
-   GNews belongs in ingestion and event normalization, not in live analysis-time raw form.
+1. **Quote workflow**
+   - PDF upload,
+   - deterministic text extraction first,
+   - GLM fallback extraction,
+   - validation and repair.
 
-4. **Resin benchmark scraping is the most fragile subsystem**  
-   The source registry, raw artifact capture, extraction validation, and promotion rules matter more than scraper volume.
+2. **Snapshot ingestion workflow**
+   - provider adapters fetch external sources,
+   - services normalize and validate data,
+   - snapshots and raw artifacts are written locally.
 
-5. **Payment-horizon logic is architecturally important even if it remains rule-based at first**  
-   The current architecture leaves room for it to remain a deterministic rule layer even before richer source integration exists.
+3. **Analysis workflow**
+   - refreshes critical datasets,
+   - loads normalized snapshots and references,
+   - computes deterministic results and FX+oil Monte Carlo scenarios,
+   - runs bounded GLM reasoning,
+   - returns a canonical analysis result with traceability and hedge tooling.
+
+This version is more credible than the older architecture description because it matches the repo’s actual behavior:
+
+- strict data validation before analysis,
+- live ensured freshness for critical datasets,
+- PP resin as benchmark-only,
+- Monte Carlo grounded in FX and Brent history,
+- Langfuse traceability endpoints,
+- and a clear split between what is implemented versus what remains roadmap.
