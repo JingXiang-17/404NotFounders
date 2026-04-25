@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, CloudUpload, FileText, Loader2 } from "lucide-react";
 
 import { AnalysisShell } from "@/components/analysis-shell";
 import { fetchApi } from "@/lib/api";
@@ -89,40 +88,130 @@ export default function NewAnalysisPage() {
   return (
     <AnalysisShell
       currentStep="upload"
-      title="Upload your supplier quotes"
-      subtitle="Drop up to five FOB PP Resin PDFs, verify the quantity request, and keep the workflow inside the actual procurement steps the backend supports."
+      title="Upload Documentation"
+      subtitle="Stage 1 of 4: Centralized Procurement Procurement Workflow"
       actions={
-        <div className="rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary-text">
-          Max 5 quotes / PDF only
+        <div className="mt-4 md:mt-0 flex items-center gap-2">
+          <span className="text-label-caps font-label-caps text-secondary uppercase bg-surface-container px-3 py-1 rounded">Session ID: PRQ-2024-089</span>
         </div>
       }
     >
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <section
-          className="relative overflow-hidden rounded-2xl border border-border bg-surface"
-          onDrop={(event) => {
-            event.preventDefault();
-            const droppedFiles = Array.from(event.dataTransfer.files).filter(
-              (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"),
-            );
-            enqueueFiles(droppedFiles);
-          }}
-          onDragOver={(event) => event.preventDefault()}
-        >
-          <div className="border-b border-border px-6 py-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
-                <CloudUpload size={22} />
+      <div className="grid grid-cols-12 gap-gutter">
+        {/* Left Column: Parameters & Requirements */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+          {/* Workflow Progress Card */}
+          <div className="bg-white border border-outline-variant p-card-padding rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+            <h3 className="text-label-caps font-label-caps text-secondary uppercase mb-stack-md">Workflow Pipeline</h3>
+            <div className="space-y-stack-md">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#004aad] text-white flex items-center justify-center text-sm font-bold">1</div>
+                <div className="flex-1">
+                  <p className="text-body-base font-semibold text-[#004aad]">Upload Documentation</p>
+                  <p className="text-[11px] text-secondary">Active Stage</p>
+                </div>
+                <span className="material-symbols-outlined text-[#004aad]">pending</span>
               </div>
-              <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-foreground">Quote intake</h2>
-                <p className="mt-1 text-sm text-secondary-text">Upload raw supplier PDFs and let the extractor validate them.</p>
+              <div className="flex items-center gap-3 opacity-50">
+                <div className="w-8 h-8 rounded-full bg-surface-container text-secondary flex items-center justify-center text-sm font-bold">2</div>
+                <div className="flex-1">
+                  <p className="text-body-base font-medium">Compliance Review</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 opacity-50">
+                <div className="w-8 h-8 rounded-full bg-surface-container text-secondary flex items-center justify-center text-sm font-bold">3</div>
+                <div className="flex-1">
+                  <p className="text-body-base font-medium">Cost Analysis</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 opacity-50">
+                <div className="w-8 h-8 rounded-full bg-surface-container text-secondary flex items-center justify-center text-sm font-bold">4</div>
+                <div className="flex-1">
+                  <p className="text-body-base font-medium">Final Decision</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-6">
-            <label className="relative flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary/40 bg-background px-6 py-10 text-center transition hover:border-primary">
+          {/* Mandatory Input Card */}
+          <div className="bg-white border border-outline-variant p-card-padding rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+            <h3 className="text-label-caps font-label-caps text-secondary uppercase mb-stack-md">Mandatory Requirements</h3>
+            <div className="space-y-stack-lg">
+              <div>
+                <label className="block text-body-sm font-semibold text-on-background mb-1">Required Quantity</label>
+                <div className="relative">
+                  <input 
+                    className="w-full border border-outline-variant rounded-lg p-2.5 text-body-base focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] transition-all outline-none" 
+                    placeholder="Enter units (e.g. 5000)" 
+                    type="number"
+                    value={quantity}
+                    onChange={(event) => setQuantity(event.target.value === "" ? "" : Number(event.target.value))}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body-sm text-secondary font-medium">UNITS</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-body-sm font-semibold text-on-background mb-3">Urgency Level</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="cursor-pointer">
+                    <input 
+                      className="peer sr-only" 
+                      name="urgency" 
+                      type="radio" 
+                      value="normal"
+                      checked={urgency === "Normal"}
+                      onChange={() => setUrgency("Normal")}
+                    />
+                    <div className="flex items-center justify-center p-3 border border-outline-variant rounded-lg text-body-sm font-medium peer-checked:bg-[#004aad] peer-checked:text-white peer-checked:border-[#004aad] transition-all">
+                      Normal
+                    </div>
+                  </label>
+                  <label className="cursor-pointer">
+                    <input 
+                      className="peer sr-only" 
+                      name="urgency" 
+                      type="radio" 
+                      value="urgent"
+                      checked={urgency === "Urgent"}
+                      onChange={() => setUrgency("Urgent")}
+                    />
+                    <div className="flex items-center justify-center p-3 border border-outline-variant rounded-lg text-body-sm font-medium peer-checked:bg-[#ba1a1a] peer-checked:text-white peer-checked:border-[#ba1a1a] transition-all">
+                      Urgent
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div className="pt-2">
+                <div className="p-3 bg-surface-container-low rounded-lg border border-dashed border-outline-variant">
+                  <div className="flex gap-2">
+                    <span className="material-symbols-outlined text-secondary text-sm">info</span>
+                    <p className="text-[11px] leading-tight text-secondary">Inputs will be used to calibrate the AI cost analysis engine in Step 3.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Main Dropzone Area */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-gutter">
+          {/* Centralized Drag & Drop Area */}
+          <div className="bg-white border border-outline-variant p-gutter rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.04)] flex flex-col min-h-[400px]">
+            <div className="flex items-center justify-between mb-stack-md">
+              <h3 className="text-h2 font-h2 text-on-background">FOB Supplier Documentation</h3>
+              <span className="text-body-sm text-secondary">{files.length} / 5 Files Uploaded</span>
+            </div>
+
+            <section
+              className="relative flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-lg bg-surface-container-lowest p-10 text-center transition hover:border-[#004aad] hover:bg-slate-50 flex-1"
+              onDrop={(event) => {
+                event.preventDefault();
+                const droppedFiles = Array.from(event.dataTransfer.files).filter(
+                  (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"),
+                );
+                enqueueFiles(droppedFiles);
+              }}
+              onDragOver={(event) => event.preventDefault()}
+            >
               <input
                 type="file"
                 multiple
@@ -131,98 +220,63 @@ export default function NewAnalysisPage() {
                 onChange={(event) => enqueueFiles(Array.from(event.target.files ?? []))}
                 title="Drop quote PDFs here"
               />
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-primary/30 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(13,255,214,0.08),0_0_30px_rgba(13,255,214,0.08)]">
-                <CloudUpload size={34} />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#004aad]/10 text-[#004aad]">
+                <span className="material-symbols-outlined text-3xl">upload_file</span>
               </div>
-              <h3 className="text-2xl font-semibold tracking-[-0.03em] text-foreground">Drop quote PDFs here</h3>
-              <p className="mt-3 max-w-md text-sm leading-6 text-secondary-text">
-                Keep uploads within scope: PP Resin, FOB terms, and suppliers relevant to Port Klang import decisions.
+              <h3 className="text-xl font-semibold text-on-background mb-2">Drag & Drop PDFs Here</h3>
+              <p className="max-w-md text-sm leading-6 text-secondary mb-6">
+                Ensure quotes clearly state FOB terms, supplier details, and PP Resin product specifications.
               </p>
-              <div className="mt-8 inline-flex rounded-full border border-border bg-surface px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-secondary-text">
-                Click to browse or drag files in
+              <div className="inline-flex rounded-md border border-outline bg-white px-5 py-2 text-sm font-semibold text-[#004aad]">
+                Browse Files
               </div>
-            </label>
+            </section>
           </div>
-        </section>
 
-        <div className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-border bg-surface">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-secondary-text">Request setup</h2>
-            </div>
-            <div className="space-y-5 p-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary-text">Required quantity (MT)</label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value === "" ? "" : Number(event.target.value))}
-                  placeholder="e.g. 100"
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-foreground outline-none transition focus:border-primary"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary-text">Urgency</label>
-                <select
-                  value={urgency}
-                  onChange={(event) => setUrgency(event.target.value as "Normal" | "Urgent")}
-                  className="h-12 w-full rounded-xl border border-border bg-background px-4 text-foreground outline-none transition focus:border-primary"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                disabled={!isContinueEnabled}
-                onClick={handleContinue}
-                className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Continue to Review
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border bg-surface">
-            <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-secondary-text">Upload status</h2>
-            </div>
-            <div className="space-y-3 p-4">
-              {files.length === 0 ? (
-                <div className="rounded-xl border border-border bg-background p-5 text-sm leading-6 text-secondary-text">
-                  No files uploaded yet. Once PDFs are processed, this panel will show supplier extraction and validation status.
-                </div>
-              ) : null}
-
-              {files.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-border bg-background p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-xl border border-border bg-surface p-3 text-secondary-text">
-                        <FileText size={18} />
-                      </div>
+          {/* Upload Status List */}
+          {files.length > 0 && (
+            <div className="bg-white border border-outline-variant p-gutter rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+              <h3 className="text-label-caps font-label-caps text-secondary uppercase mb-stack-md">Processing Status</h3>
+              <div className="space-y-3">
+                {files.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-surface-container-lowest">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-secondary">description</span>
                       <div>
-                        <div className="text-sm font-medium text-foreground">{entry.file.name}</div>
-                        {entry.status === "success" && entry.data ? (
-                          <p className="mt-1 text-sm text-secondary-text">
+                        <p className="text-body-sm font-semibold text-on-background">{entry.file.name}</p>
+                        {entry.status === "success" && entry.data && (
+                          <p className="text-[11px] text-secondary">
                             {entry.data.extracted_quote?.supplier_name ?? "Supplier pending"} /{" "}
-                            {entry.data.extracted_quote?.currency ?? "-"}{" "}
-                            {entry.data.extracted_quote?.unit_price?.toLocaleString() ?? "-"}
+                            {entry.data.extracted_quote?.currency ?? "-"} {entry.data.extracted_quote?.unit_price?.toLocaleString() ?? "-"}
                           </p>
-                        ) : null}
-                        {entry.status === "error" ? <p className="mt-1 text-sm text-red-400">{entry.error}</p> : null}
+                        )}
+                        {entry.status === "error" && (
+                          <p className="text-[11px] text-[#ba1a1a]">{entry.error}</p>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-0.5">
-                      {entry.status === "uploading" ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : null}
-                      {entry.status === "success" ? <CheckCircle2 className="h-5 w-5 text-primary" /> : null}
-                      {entry.status === "error" ? <AlertCircle className="h-5 w-5 text-red-400" /> : null}
+                    <div>
+                      {entry.status === "uploading" && <span className="material-symbols-outlined text-[#004aad] animate-spin">refresh</span>}
+                      {entry.status === "success" && <span className="material-symbols-outlined text-[#004aad]">check_circle</span>}
+                      {entry.status === "error" && <span className="material-symbols-outlined text-[#ba1a1a]">error</span>}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </section>
+          )}
+
+          {/* Proceed Button */}
+          <div className="flex justify-end mt-4">
+            <button
+              type="button"
+              disabled={!isContinueEnabled}
+              onClick={handleContinue}
+              className="px-6 py-3 bg-[#004aad] text-white font-semibold text-body-sm rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue to Data Review <span className="material-symbols-outlined text-base">arrow_forward</span>
+            </button>
+          </div>
         </div>
       </div>
     </AnalysisShell>

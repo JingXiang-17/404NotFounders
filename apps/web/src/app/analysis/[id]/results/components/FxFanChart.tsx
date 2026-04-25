@@ -42,11 +42,11 @@ function FanTooltip({
   }
 
   return (
-    <div className="rounded-sm border border-border bg-[var(--color-surface)] px-3 py-2 font-mono text-sm shadow-xl">
-      <div className="mb-2 text-secondary-text">D{label}</div>
-      <div className="text-[rgba(255,107,107,0.95)]">p90 : {formatChartValue(valuePrefix, point.p90)}</div>
-      <div className="mt-2 text-primary">p50 : {formatChartValue(valuePrefix, point.p50)}</div>
-      <div className="mt-2 text-[rgba(0,245,212,0.85)]">p10 : {formatChartValue(valuePrefix, point.p10)}</div>
+    <div className="rounded border border-outline-variant bg-white px-3 py-2 font-data-mono text-sm shadow-[0_4px_6px_rgba(0,0,0,0.1)] z-50">
+      <div className="mb-2 text-secondary font-sans font-semibold">Day {label}</div>
+      <div className="text-[#ba1a1a]">p90 : {formatChartValue(valuePrefix, point.p90)}</div>
+      <div className="mt-1 text-[#004aad]">p50 : {formatChartValue(valuePrefix, point.p50)}</div>
+      <div className="mt-1 text-[#00f5d4]">p10 : {formatChartValue(valuePrefix, point.p10)}</div>
     </div>
   );
 }
@@ -73,14 +73,14 @@ export function FxFanChart({ data, valuePrefix = "" }: FxFanChartProps) {
         <AreaChart data={chartData} margin={{ top: 12, right: 24, left: 18, bottom: 8 }}>
           <XAxis 
             dataKey="day" 
-            stroke="var(--color-border)" 
-            tick={{ fill: "var(--color-secondary-text)", fontSize: 11 }}
+            stroke="#cbd5e1" 
+            tick={{ fill: "#64748b", fontSize: 11, fontFamily: "Inter" }}
             tickFormatter={(val) => `D${val}`}
           />
           <YAxis 
             domain={['auto', 'auto']} 
-            stroke="var(--color-border)" 
-            tick={{ fill: "var(--color-secondary-text)", fontSize: 11 }}
+            stroke="#cbd5e1" 
+            tick={{ fill: "#64748b", fontSize: 11, fontFamily: "Inter" }}
             tickFormatter={(value) =>
               Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })
             }
@@ -91,39 +91,39 @@ export function FxFanChart({ data, valuePrefix = "" }: FxFanChartProps) {
             type="monotone" 
             dataKey="p50ToP90" 
             stroke="none" 
-            fill="rgb(255, 72, 72)" 
-            fillOpacity={0.18} 
+            fill="#ff6b6b" 
+            fillOpacity={0.15} 
             isAnimationActive={false}
           />
           <Area 
             type="monotone" 
             dataKey="p10ToP50" 
             stroke="none"
-            fill="var(--color-primary)" 
-            fillOpacity={0.22} 
+            fill="#004aad" 
+            fillOpacity={0.15} 
             isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="p90"
-            stroke="rgba(255, 107, 107, 0.55)"
-            strokeWidth={1}
+            stroke="rgba(255, 107, 107, 0.7)"
+            strokeWidth={1.5}
             dot={false}
             isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="p50"
-            stroke="var(--color-primary)"
-            strokeWidth={2}
+            stroke="#004aad"
+            strokeWidth={2.5}
             dot={false}
             isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="p10" 
-            stroke="rgba(0, 245, 212, 0.4)"
-            strokeWidth={1}
+            stroke="rgba(0, 245, 212, 0.7)"
+            strokeWidth={1.5}
             dot={false}
             isAnimationActive={false}
           />

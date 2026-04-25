@@ -1,7 +1,5 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RecommendationCard } from "@/lib/types";
@@ -16,10 +14,10 @@ export function ReasoningPanel({ isLoading, recommendation, traceUrl }: Reasonin
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-6 w-3/4 bg-border" />
-        <Skeleton className="h-20 w-full bg-border" />
-        <Skeleton className="h-20 w-full bg-border" />
-        <Skeleton className="h-20 w-full bg-border" />
+        <Skeleton className="h-6 w-3/4 bg-slate-100" />
+        <Skeleton className="h-20 w-full bg-slate-100" />
+        <Skeleton className="h-20 w-full bg-slate-100" />
+        <Skeleton className="h-20 w-full bg-slate-100" />
       </div>
     );
   }
@@ -31,25 +29,24 @@ export function ReasoningPanel({ isLoading, recommendation, traceUrl }: Reasonin
   const backup = recommendation.backup_options[0];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-border pb-2">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">AI Analyst</h3>
-        {traceUrl ? (
+    <div className="space-y-4">
+      {traceUrl && (
+        <div className="flex justify-end">
           <a
             href={traceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[11px] font-bold text-secondary-text transition-colors hover:text-primary"
+            className="flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase text-[#004aad] transition-colors hover:opacity-80"
           >
             View Langfuse Trace
-            <ExternalLink size={12} />
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
           </a>
-        ) : null}
-      </div>
+        </div>
+      )}
 
-      <Accordion defaultValue={["reasoning"]} className="w-full">
+      <Accordion className="w-full">
         <AccordionItem value="reasoning" className="border-b-0">
-          <AccordionTrigger className="py-2 text-sm font-semibold text-foreground hover:text-primary hover:no-underline">
+          <AccordionTrigger className="py-2 text-sm font-semibold text-on-background hover:text-[#004aad] hover:no-underline">
             Why This Recommendation
           </AccordionTrigger>
           <AccordionContent className="space-y-4 pt-4">
@@ -57,43 +54,43 @@ export function ReasoningPanel({ isLoading, recommendation, traceUrl }: Reasonin
               {recommendation.reasons.map((reason, index) => (
                 <div
                   key={reason}
-                  className="flex items-start gap-3 rounded-lg border border-border bg-[var(--color-surface-elevated)] p-3"
+                  className="flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-3"
                 >
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-strong)] text-[11px] font-bold text-foreground">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#004aad]/10 text-[11px] font-bold text-[#004aad]">
                     {index + 1}
                   </div>
-                  <p className="text-sm leading-relaxed text-foreground">{reason}</p>
+                  <p className="text-sm leading-relaxed text-on-background">{reason}</p>
                 </div>
               ))}
             </div>
 
-            {recommendation.caveat ? (
-              <div className="rounded-lg border-l-4 border-[var(--color-warning)] bg-[var(--color-surface-elevated)] p-3">
-                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-warning)]">
-                  Risk Caveat
+            {recommendation.caveat && (
+              <div className="rounded-lg border-l-4 border-[#ffb400] bg-[#ffb400]/10 p-3">
+                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[#b07d00] flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">warning</span> Risk Caveat
                 </h4>
-                <p className="text-sm text-foreground">{recommendation.caveat}</p>
+                <p className="text-sm text-on-background">{recommendation.caveat}</p>
               </div>
-            ) : null}
+            )}
 
-            {backup ? (
-              <div className="rounded-lg border border-border bg-[var(--color-surface-elevated)] p-3">
-                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-secondary-text">
+            {backup && (
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
+                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
                   Backup Option
                 </h4>
-                <p className="text-sm text-foreground">{backup.reason}</p>
-                <p className="mt-2 text-xs text-secondary-text">Premium vs winner: RM {backup.premium_vs_winner.toLocaleString()}</p>
+                <p className="text-sm text-on-background">{backup.reason}</p>
+                <p className="mt-2 text-xs font-medium text-secondary">Premium vs winner: RM {backup.premium_vs_winner.toLocaleString()}</p>
               </div>
-            ) : null}
+            )}
 
-            {recommendation.impact_summary ? (
-              <div className="rounded-lg border border-border bg-[var(--color-surface-elevated)] p-3">
-                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-secondary-text">
+            {recommendation.impact_summary && (
+              <div className="rounded-lg border border-[#004aad]/30 bg-[#004aad]/5 p-3">
+                <h4 className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[#004aad]">
                   Impact Summary
                 </h4>
-                <p className="text-sm text-foreground">{recommendation.impact_summary}</p>
+                <p className="text-sm text-on-background">{recommendation.impact_summary}</p>
               </div>
-            ) : null}
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>

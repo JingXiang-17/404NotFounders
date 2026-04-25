@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { pdf } from "@react-pdf/renderer";
-import { Download, Lock, ShieldCheck, Truck, WalletCards, Zap } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -153,7 +152,7 @@ export default function ResultsPage() {
     forecastEndDay > 0
       ? `${forecastEndDay}-day landed-cost Monte Carlo across tariff, freight, FX, oil, weather, holidays, macro, news, and PP resin benchmark.`
       : "Landed-cost Monte Carlo across tariff, freight, FX, oil, weather, holidays, macro, news, and PP resin benchmark.";
-  const decisionGridClass = "grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]";
+  
   const latestNewsEvents = analysis?.top_news_events?.length
     ? analysis.top_news_events
     : latestNewsQuery.data?.data ?? [];
@@ -162,164 +161,172 @@ export default function ResultsPage() {
   return (
     <AnalysisShell
       currentStep="decision"
-      title="Decision workspace"
-      subtitle={forecastSubtitle}
+      title="Final Decision Recommendation"
+      subtitle="Execution Strategy"
       actions={
-        analysis?.recommendation ? (
-          <div className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            {analysis.recommendation.mode === "single_quote" ? "Single quote mode" : "Comparison mode"}
-          </div>
-        ) : undefined
+        <div className="flex gap-stack-md">
+          <button className="px-4 py-2 border border-outline-variant text-secondary font-body-base rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">file_download</span>
+            Export Report
+          </button>
+          <button className="px-6 py-2 bg-[#004aad] text-white font-body-base font-semibold rounded-lg shadow-sm hover:opacity-90 transition-opacity">
+            Execute Procurement
+          </button>
+        </div>
       }
     >
       {analysisQuery.error ? (
-        <div className="rounded-xl border border-[var(--color-warning)] bg-surface p-4 text-sm text-[var(--color-warning)]">
+        <div className="rounded-xl border border-[#ba1a1a] bg-[#fff9f9] p-4 text-sm text-[#ba1a1a] mb-stack-lg">
           {(analysisQuery.error as Error).message}
         </div>
       ) : null}
 
-      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={<Zap size={16} />} label={`Current FX (${pair ?? "N/A"})`} value={pair ? `${analysis?.fx_simulations[pair]?.current_spot?.toFixed(4) ?? "-"}` : "-"} helper="Spot used for locked hedge leg" />
-        <KpiCard icon={<Truck size={16} />} label="Avg Landed Cost" value={formatMyr(avgCost)} helper="Supplier p50 average" />
-        <KpiCard icon={<ShieldCheck size={16} />} label="P90 Risk Exposure" value={formatMyr(Math.max(0, p90Cost - expectedCost))} helper={`Fan width: ${formatMyr(riskWidth)}`} warning={Boolean(activeScenario?.p90_margin_wipeout_flag)} />
-        <KpiCard icon={<WalletCards size={16} />} label="Hedge Ratio" value={`${effectiveHedgeRatio}%`} helper={`Curve is ${direction}`} />
+      <div className="mb-stack-lg grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <KpiCard icon="currency_exchange" label={`Current FX (${pair ?? "N/A"})`} value={pair ? `${analysis?.fx_simulations[pair]?.current_spot?.toFixed(4) ?? "-"}` : "-"} helper="Spot used for locked hedge leg" />
+        <KpiCard icon="local_shipping" label="Avg Landed Cost" value={formatMyr(avgCost)} helper="Supplier p50 average" />
+        <KpiCard icon="gpp_maybe" label="P90 Risk Exposure" value={formatMyr(Math.max(0, p90Cost - expectedCost))} helper={`Fan width: ${formatMyr(riskWidth)}`} warning={Boolean(activeScenario?.p90_margin_wipeout_flag)} />
+        <KpiCard icon="account_balance_wallet" label="Hedge Ratio" value={`${effectiveHedgeRatio}%`} helper={`Curve is ${direction}`} />
       </div>
 
-      <div className={decisionGridClass}>
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                {forecastTitle}
-              </h2>
-              <p className="mt-1 text-xs text-secondary-text">
-                Deterministic 2,000-path simulation. Hedge changes reuse the same shocks, so the chart narrows without rerolling.
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                {forecastRangeLabel}
+      <div className="grid grid-cols-12 gap-gutter mb-stack-lg">
+        {/* Main Chart Section */}
+        <div className="col-span-12 xl:col-span-8 space-y-gutter">
+          <div className="bg-white border border-outline-variant rounded-xl p-card-padding shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+            <div className="flex justify-between items-start mb-stack-md">
+              <div>
+                <h2 className="font-h2 text-h2 text-on-background">{forecastTitle}</h2>
+                <p className="font-body-sm text-secondary mt-1">{forecastSubtitle}</p>
               </div>
-              <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-secondary-text">
-                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[rgba(0,245,212,0.8)]"></span> P10 (Optimistic)</span>
-                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-primary"></span> P50 (Expected)</span>
-                <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[rgba(255,107,107,0.8)]"></span> P90 (Stress)</span>
+              <div className="flex flex-col items-end gap-2">
+                <div className="rounded-full border border-[#004aad]/30 bg-[#004aad]/10 px-3 py-1 text-xs font-semibold text-[#004aad]">
+                  {forecastRangeLabel}
+                </div>
+                <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-secondary">
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#00f5d4]"></span> P10</span>
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#004aad]"></span> P50</span>
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#ff6b6b]"></span> P90</span>
+                </div>
+              </div>
+            </div>
+
+            {analysisQuery.isLoading ? <Skeleton className="h-[320px] w-full bg-slate-100" /> : null}
+            {!analysisQuery.isLoading && activeScenario ? (
+              <FxFanChart data={activeScenario} valuePrefix="RM " />
+            ) : null}
+            {!analysisQuery.isLoading && !activeScenario ? (
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-sm text-secondary">
+                Landed-cost scenario is not available. Run analysis again after market snapshots are loaded.
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid gap-3 text-xs md:grid-cols-3">
+              <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
+                <span className="block uppercase tracking-wider text-secondary">P10 optimistic</span>
+                <span className="font-data-mono font-medium text-on-background text-sm">{formatMyr(activeScenario?.p10_envelope?.at(-1) ?? 0)}</span>
+              </div>
+              <div className="rounded-lg border border-[#004aad]/30 bg-[#004aad]/10 p-3">
+                <span className="block uppercase tracking-wider text-[#004aad]">P50 expected</span>
+                <span className="font-data-mono font-bold text-[#004aad] text-sm">{formatMyr(expectedCost)}</span>
+              </div>
+              <div className="rounded-lg border border-[#ba1a1a]/40 bg-[#ba1a1a]/10 p-3">
+                <span className="block uppercase tracking-wider text-[#ba1a1a]">P90 stress</span>
+                <span className="font-data-mono font-medium text-[#ba1a1a] text-sm">{formatMyr(p90Cost)}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)]">
+              {analysisQuery.isLoading ? (
+                <Skeleton className="h-[132px] w-full bg-slate-100" />
+              ) : (
+                <HedgeSlider
+                  hedgeRatio={effectiveHedgeRatio}
+                  onHedgeChange={setHedgeRatio}
+                  expectedLandedCost={expectedCost}
+                />
+              )}
+
+              <div className="grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => bankDraftMutation.mutate(effectiveHedgeRatio)}
+                  disabled={!analysis || bankDraftMutation.isPending}
+                  className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-lg bg-[#004aad] px-4 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  {bankDraftMutation.isPending ? "Generating..." : "Generate Bank Instruction"}
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="V2 roadmap: direct API execution for API-first fintech partners."
+                  className="flex min-h-[56px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-sm font-semibold text-secondary opacity-70"
+                >
+                  <span className="material-symbols-outlined text-[18px]">lock</span>
+                  Execute via API (Coming Soon)
+                </button>
+                {pdfStatus ? <p className="text-xs text-[#004aad] font-medium">{pdfStatus}</p> : null}
               </div>
             </div>
           </div>
-
-          {analysisQuery.isLoading ? <Skeleton className="h-[320px] w-full bg-border" /> : null}
-          {!analysisQuery.isLoading && activeScenario ? (
-            <FxFanChart data={activeScenario} valuePrefix="RM " />
-          ) : null}
-          {!analysisQuery.isLoading && !activeScenario ? (
-            <div className="rounded-lg border border-border bg-[var(--color-surface-elevated)] p-4 text-sm text-secondary-text">
-              Landed-cost scenario is not available. Run analysis again after market snapshots are loaded.
-            </div>
-          ) : null}
-
-          <div className="mt-4 grid gap-3 text-xs text-secondary-text md:grid-cols-3">
-            <div className="rounded-lg border border-border bg-[var(--color-surface-elevated)] p-3">
-              <span className="block uppercase tracking-wider">P10 optimistic</span>
-              <span className="font-mono text-foreground">{formatMyr(activeScenario?.p10_envelope?.at(-1) ?? 0)}</span>
-            </div>
-            <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
-              <span className="block uppercase tracking-wider">P50 expected</span>
-              <span className="font-mono text-primary">{formatMyr(expectedCost)}</span>
-            </div>
-            <div className="rounded-lg border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 p-3">
-              <span className="block uppercase tracking-wider">P90 stress</span>
-              <span className="font-mono text-[var(--color-warning)]">{formatMyr(p90Cost)}</span>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)]">
-            {analysisQuery.isLoading ? (
-              <Skeleton className="h-[132px] w-full bg-border" />
-            ) : (
-              <HedgeSlider
-                hedgeRatio={effectiveHedgeRatio}
-                onHedgeChange={setHedgeRatio}
-                expectedLandedCost={expectedCost}
-              />
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <button
-                type="button"
-                onClick={() => bankDraftMutation.mutate(effectiveHedgeRatio)}
-                disabled={!analysis || bankDraftMutation.isPending}
-                className="flex min-h-[68px] w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-background transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download size={16} />
-                {bankDraftMutation.isPending ? "Generating..." : "Generate Bank Instruction (Maybank / CIMB)"}
-              </button>
-              <button
-                type="button"
-                disabled
-                title="V2 roadmap: direct API execution for API-first fintech partners."
-                className="flex min-h-[68px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border bg-background/20 px-4 py-3 text-sm font-semibold text-secondary-text opacity-70"
-              >
-                <Lock size={16} />
-                Execute via WorldFirst API (Coming Soon)
-              </button>
-              {pdfStatus ? <p className="text-xs text-primary sm:col-span-2 lg:col-span-1">{pdfStatus}</p> : null}
-            </div>
-          </div>
-        </div>
-
-        <RiskDriversPanel
-          analysis={analysis}
-          latestNewsEvents={latestNewsEvents}
-          latestWeatherRisks={latestWeatherRisks}
-        />
-      </div>
-
-      <div className={`mt-5 ${decisionGridClass}`}>
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-              {analysis?.recommendation.mode === "single_quote" ? "Single Quote Evaluation" : "Active Procurement Quotes"}
+          
+          <div className="bg-white border border-outline-variant p-card-padding rounded-xl shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+            <h2 className="text-label-caps font-label-caps text-secondary uppercase mb-stack-md flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#004aad] text-lg">smart_toy</span>
+              Bounded AI Reasoning
             </h2>
-            <div className="text-xs text-secondary-text">Quote-vs-PP-market badges are live from SunSirs snapshots.</div>
-          </div>
-
-          {analysisQuery.isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-[200px] w-full rounded-xl bg-border" />
-              <Skeleton className="h-[150px] w-full rounded-xl bg-border" />
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            {!analysisQuery.isLoading
-              ? analysis?.ranked_quotes.map((rankedQuote) => (
-                  <SupplierCard
-                    key={rankedQuote.quote.quote_id}
-                    rankedQuote={rankedQuote}
-                    isRecommended={rankedQuote.quote.quote_id === recommendedQuoteId}
-                    timingAdvice={
-                      rankedQuote.quote.quote_id === recommendedQuoteId ? analysis.recommendation.timing : undefined
-                    }
-                    hedgeRec={
-                      rankedQuote.quote.quote_id === recommendedQuoteId ? analysis.recommendation.hedge_pct : undefined
-                    }
-                    whyNotReason={analysis?.recommendation.why_not_others[rankedQuote.quote.quote_id]}
-                    singleQuoteMode={analysis?.recommendation.mode === "single_quote"}
-                    evaluationLabel={analysis?.recommendation.evaluation_label}
-                    savingsVsNextBest={savingsVsNextBest}
-                  />
-                ))
-              : null}
+            <ReasoningPanel
+              isLoading={analysisQuery.isLoading}
+              recommendation={analysis?.recommendation}
+              traceUrl={analysis?.trace_url}
+            />
           </div>
         </div>
 
-        <div className="rounded-xl border border-primary/20 bg-[linear-gradient(180deg,rgba(0,245,212,0.10),rgba(18,19,26,0.95))] p-5">
-          <ReasoningPanel
-            isLoading={analysisQuery.isLoading}
-            recommendation={analysis?.recommendation}
-            traceUrl={analysis?.trace_url}
+        {/* Risk Panel Section */}
+        <div className="col-span-12 xl:col-span-4">
+          <RiskDriversPanel
+            analysis={analysis}
+            latestNewsEvents={latestNewsEvents}
+            latestWeatherRisks={latestWeatherRisks}
           />
+        </div>
+      </div>
+
+      <div className="bg-white border border-outline-variant p-card-padding rounded-xl shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-h2 font-h2 text-on-background">
+            {analysis?.recommendation.mode === "single_quote" ? "Single Quote Evaluation" : "Active Procurement Quotes"}
+          </h2>
+          <div className="text-xs text-secondary">Quote-vs-PP-market badges are live from SunSirs snapshots.</div>
+        </div>
+
+        {analysisQuery.isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full rounded-xl bg-slate-100" />
+            <Skeleton className="h-[150px] w-full rounded-xl bg-slate-100" />
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {!analysisQuery.isLoading
+            ? analysis?.ranked_quotes.map((rankedQuote) => (
+                <SupplierCard
+                  key={rankedQuote.quote.quote_id}
+                  rankedQuote={rankedQuote}
+                  isRecommended={rankedQuote.quote.quote_id === recommendedQuoteId}
+                  timingAdvice={
+                    rankedQuote.quote.quote_id === recommendedQuoteId ? analysis.recommendation.timing : undefined
+                  }
+                  hedgeRec={
+                    rankedQuote.quote.quote_id === recommendedQuoteId ? analysis.recommendation.hedge_pct : undefined
+                  }
+                  whyNotReason={analysis?.recommendation.why_not_others[rankedQuote.quote.quote_id]}
+                  singleQuoteMode={analysis?.recommendation.mode === "single_quote"}
+                  evaluationLabel={analysis?.recommendation.evaluation_label}
+                  savingsVsNextBest={savingsVsNextBest}
+                />
+              ))
+            : null}
         </div>
       </div>
     </AnalysisShell>
@@ -340,31 +347,33 @@ function RiskDriversPanel({
   const highlightedRows = rows.filter((row) => row.hasConcreteEvidence).slice(0, 4);
 
   return (
-    <div className="h-full min-h-[720px] overflow-hidden rounded-xl border border-border bg-surface p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Risk Drivers</h2>
+    <div className="h-full min-h-[720px] rounded-xl border border-outline-variant bg-white p-5 shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center justify-between gap-3 mb-stack-md">
+        <h2 className="text-h2 font-h2 text-on-background flex items-center gap-2">
+           <span className="material-symbols-outlined text-[#004aad]">security</span> Risk Drivers
+        </h2>
         {highlightedRows.length ? (
-          <span className="rounded-full border border-border bg-background/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-secondary-text">
+          <span className="rounded-full bg-surface-container-high px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface">
             Top {highlightedRows.length}
           </span>
         ) : null}
       </div>
 
       {risk ? (
-        <div className="mt-4 max-h-[630px] space-y-3 overflow-y-auto pr-1">
+        <div className="max-h-[700px] space-y-3 overflow-y-auto pr-1">
           {highlightedRows.length ? highlightedRows.map((row) => (
             <div
               key={`insight-${row.key}`}
-              className={`rounded-lg border bg-[var(--color-surface-elevated)] p-3 ${riskSeverity(row.score).cardClass}`}
+              className={`rounded-lg border bg-white p-3 ${riskSeverity(row.score).cardClass}`}
             >
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{row.label}</h3>
-                  <p className="mt-1 text-[11px] leading-relaxed text-secondary-text">
-                    {compactEvidence(row)} <span className="text-foreground">Impact:</span> {compactImpact(row)}
+                  <h3 className="text-label-caps font-label-caps uppercase tracking-widest text-on-background">{row.label}</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-secondary">
+                    {compactEvidence(row)} <span className="text-on-background font-medium">Impact:</span> {compactImpact(row)}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${riskSeverity(row.score).badgeClass}`}>
+                <span className={`shrink-0 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${riskSeverity(row.score).badgeClass}`}>
                   {riskSeverity(row.score).label}
                 </span>
               </div>
@@ -373,20 +382,20 @@ function RiskDriversPanel({
                   href={row.sourceLink.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] font-semibold text-primary transition hover:text-primary/80"
+                  className="text-[11px] font-semibold text-[#004aad] transition hover:opacity-80"
                 >
                   Source: {row.sourceLink.label}
                 </a>
               ) : null}
             </div>
           )) : (
-            <p className="rounded-lg border border-border bg-[var(--color-surface-elevated)] p-3 text-xs leading-relaxed text-secondary-text">
+            <p className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-xs leading-relaxed text-secondary">
               No major live risk driver detected from current snapshots.
             </p>
           )}
         </div>
       ) : (
-        <p className="mt-4 text-sm text-secondary-text">Risk driver analysis is not available yet.</p>
+        <p className="mt-4 text-sm text-secondary">Risk driver analysis is not available yet.</p>
       )}
     </div>
   );
@@ -502,21 +511,21 @@ function riskSeverity(score: number) {
   if (score >= 0.75) {
     return {
       label: "High Risk",
-      badgeClass: "border border-[rgba(255,107,107,0.45)] bg-[rgba(255,107,107,0.15)] text-[rgba(255,150,150,0.95)]",
-      cardClass: "border-[rgba(255,107,107,0.28)]",
+      badgeClass: "bg-[#ba1a1a]/10 text-[#ba1a1a]",
+      cardClass: "border-[#ba1a1a]/30",
     };
   }
   if (score >= 0.45) {
     return {
       label: "Medium Risk",
-      badgeClass: "border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
-      cardClass: "border-[var(--color-warning)]/30",
+      badgeClass: "bg-[#ffb400]/15 text-[#b07d00]",
+      cardClass: "border-[#ffb400]/30",
     };
   }
   return {
     label: "Watch",
-    badgeClass: "border border-border bg-background/50 text-secondary-text",
-    cardClass: "border-border",
+    badgeClass: "bg-surface-container-high text-secondary",
+    cardClass: "border-outline-variant",
   };
 }
 
@@ -618,20 +627,20 @@ function KpiCard({
   helper,
   warning = false,
 }: {
-  icon: ReactNode;
+  icon: string;
   label: string;
   value: string;
   helper: string;
   warning?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <div className="mb-4 flex items-center justify-between text-secondary-text">
+    <div className="rounded-xl border border-outline-variant bg-white p-4 shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+      <div className="mb-4 flex items-center justify-between text-secondary">
         <span className="text-[11px] font-bold uppercase tracking-[0.16em]">{label}</span>
-        <span className={warning ? "text-[var(--color-warning)]" : "text-secondary-text"}>{icon}</span>
+        <span className={warning ? "text-[#ba1a1a] material-symbols-outlined text-[20px]" : "text-secondary material-symbols-outlined text-[20px]"}>{icon}</span>
       </div>
-      <div className="font-mono text-3xl font-semibold text-foreground">{value}</div>
-      <div className={warning ? "mt-2 text-xs text-[var(--color-warning)]" : "mt-2 text-xs text-primary"}>
+      <div className="font-data-mono text-2xl font-bold text-on-background">{value}</div>
+      <div className={warning ? "mt-2 text-[11px] text-[#ba1a1a] font-medium" : "mt-2 text-[11px] text-[#004aad] font-medium"}>
         {helper}
       </div>
     </div>

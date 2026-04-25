@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { AnalysisShell } from "@/components/analysis-shell";
@@ -95,23 +94,20 @@ export default function AnalysisProgressPage() {
   return (
     <AnalysisShell currentStep="analysis">
       <div className="mx-auto flex min-h-[65vh] w-full max-w-4xl items-center justify-center">
-        <section className="w-full overflow-hidden rounded-2xl border border-border bg-surface">
-          <div className="border-b border-border px-6 py-6">
-            <div className="flex items-center gap-4">
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
-                <div className="absolute inset-0 rounded-2xl border border-primary/20 animate-pulse" />
-                <div className="h-4 w-4 rounded-full bg-primary shadow-[0_0_18px_rgba(13,255,214,0.85)]" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-semibold tracking-[-0.04em] text-foreground">Analyzing your quotes...</h1>
-                <p className="mt-2 text-sm text-secondary-text">
-                  Step 3 is tied to the real backend run. Once the result endpoint resolves, this screen moves to the decision page automatically.
-                </p>
-              </div>
+        <section className="w-full bg-white border border-outline-variant p-card-padding rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-4 border-b border-outline-variant pb-stack-md mb-stack-md">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container-low border border-outline-variant">
+              <span className="material-symbols-outlined text-[#004aad] text-3xl animate-pulse">analytics</span>
+            </div>
+            <div>
+              <h1 className="font-h1 text-h1 text-on-background">Analyzing your quotes...</h1>
+              <p className="mt-1 text-body-sm text-secondary">
+                Step 3 is tied to the real backend run. Once the result endpoint resolves, this screen moves to the decision page automatically.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4 px-4 py-5 sm:px-6">
+          <div className="space-y-4 mb-stack-lg">
             {TIMELINE_STEPS.map((step, index) => {
               const isComplete = index < activeIndex || Boolean(resultQuery.data && index < TIMELINE_STEPS.length);
               const isActive = !resultQuery.data && index === activeIndex;
@@ -120,20 +116,20 @@ export default function AnalysisProgressPage() {
                 <div
                   key={step.id}
                   className={[
-                    "flex items-start gap-3 rounded-xl px-4 py-4",
-                    isActive ? "border-l-2 border-primary bg-[var(--color-surface-elevated)]" : "",
+                    "flex items-start gap-3 rounded p-4",
+                    isActive ? "border-l-4 border-[#004aad] bg-surface-container-lowest" : "border-l-4 border-transparent",
                   ].join(" ")}
                 >
                   <div className="mt-0.5">
                     {isComplete ? (
-                      <CheckCircle2 size={18} className="text-primary" />
+                      <span className="material-symbols-outlined text-[#004aad] text-xl">check_circle</span>
                     ) : isActive ? (
-                      <Loader2 size={18} className="animate-spin text-primary" />
+                      <span className="material-symbols-outlined text-[#004aad] text-xl animate-spin">refresh</span>
                     ) : (
-                      <div className="mt-1 h-2.5 w-2.5 rounded-full bg-secondary-text/60" />
+                      <span className="material-symbols-outlined text-slate-300 text-xl">radio_button_unchecked</span>
                     )}
                   </div>
-                  <div className={isActive ? "font-medium text-foreground" : isComplete ? "text-foreground" : "text-secondary-text"}>
+                  <div className={isActive ? "font-semibold text-on-background" : isComplete ? "text-on-background font-medium" : "text-secondary"}>
                     {step.label}
                   </div>
                 </div>
@@ -141,33 +137,29 @@ export default function AnalysisProgressPage() {
             })}
           </div>
 
-          <div className="px-6 pb-6">
-            <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm leading-6 text-secondary-text">
-              {leadLine}
+          <div className="bg-[#f7f9fb] border border-outline-variant rounded p-4 mb-stack-md">
+            <p className="font-data-mono text-body-sm text-secondary whitespace-pre-wrap">{leadLine}</p>
+          </div>
+
+          {resultQuery.error && (
+            <div className="mt-4 p-4 border border-[#ba1a1a] bg-[#fff9f9] rounded text-body-sm text-[#ba1a1a] flex flex-col gap-2">
+              <div className="flex gap-2"><span className="material-symbols-outlined">error</span> {(resultQuery.error as Error).message}</div>
+              <Link href="/analysis/new" className="font-bold underline uppercase text-[11px] tracking-widest mt-2">
+                Return to upload
+              </Link>
             </div>
+          )}
 
-            {resultQuery.error ? (
-              <div className="mt-4 rounded-xl border border-[var(--color-warning)] bg-background px-4 py-3 text-sm text-[var(--color-warning)]">
-                {(resultQuery.error as Error).message}
-                <div className="mt-3">
-                  <Link href="/analysis/new" className="font-semibold text-foreground underline decoration-primary/60 underline-offset-4">
-                    Return to upload
-                  </Link>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-6">
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-strong)]">
-                <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-secondary-text">
-                <span>Estimated time: ~20 seconds</span>
-                <span className="text-primary">{progress}%</span>
-              </div>
+          <div className="mt-6">
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#004aad] transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="mt-2 flex justify-between items-center text-[10px] font-bold tracking-widest text-secondary uppercase">
+              <span>Estimated time: ~20 seconds</span>
+              <span className="text-[#004aad]">{progress}%</span>
             </div>
           </div>
         </section>

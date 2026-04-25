@@ -56,7 +56,9 @@ yarn-error.log*
 apps/web-broken-*/
 
 # Stitch design export (frontend design only)
+stitch_lintasniaga_supply_chain_dashboard/
 stitch_lintasniaga_procurement_copilot/
+pp-resin-scraper-lab/
 
 # Local temp dirs created during verification
 .tmp_test/  
