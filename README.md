@@ -131,18 +131,14 @@ The application will be running at `http://localhost:3000`.
 ```text
 404NotFounders/
 ├── apps/
-│   ├── api/                 # FastAPI Backend
-│   │   ├── app/             # Application Logic (Routes, Services, Providers)
-│   │   ├── data/            # Local Reference & Snapshot Data
-│   │   ├── scripts/         # Ingestion Scripts
-│   │   └── tests/           # Pytest Test Suite
-│   └── web/                 # Next.js Frontend
-│       ├── src/app/         # Next.js App Router (Upload, Review, Analysis, Results)
-│       ├── src/components/  # UI Components & Dashboard Widgets
-│       └── src/lib/         # Frontend Utilities & Type Contracts
+│   ├── api/                 # FastAPI Backend (Routes, Services, Providers, AI Orchestrator)
+│   └── web/                 # Next.js Frontend (UI Components, Analysis Flow, Results Dashboard)
+├── data/                    # Local Reference & Snapshot Data Storage
+├── docs/                    # Architecture Blueprints, PRDs, & Technical Documentation
+├── example_pdf/             # Sample Quotation PDFs for Demonstration
+├── scripts/                 # Utility Scripts
+├── tests/                   # Pytest Suite and Fixtures
 ├── .agent/                  # AI Agent Skills & Workflows
-├── example_pdf/             # Sample PDF Quotes for demonstration
-├── tests/                   # E2E & Integration testing artifacts
-├── Makefile                 # Development helper commands
-└── README.md                # Project documentation
+├── Makefile                 # Development Helper Commands
+└── README.md                # Project Documentation
 ```
