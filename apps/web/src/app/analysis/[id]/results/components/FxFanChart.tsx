@@ -53,7 +53,12 @@ function FanTooltip({
 
 export function FxFanChart({ data, valuePrefix = "" }: FxFanChartProps) {
   // Range bands keep the fan inside p10-p90 instead of filling down to the axis baseline.
-  const chartData: ChartDatum[] = Array.from({ length: data.horizon_days }, (_, i) => ({
+  const pointCount = Math.min(
+    data.p10_envelope.length,
+    data.p50_envelope.length,
+    data.p90_envelope.length,
+  );
+  const chartData: ChartDatum[] = Array.from({ length: pointCount }, (_, i) => ({
     day: i,
     p10: data.p10_envelope[i],
     p50: data.p50_envelope[i],

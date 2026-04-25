@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.services.market_data_service as market_data_service
+import app.providers.yfinance_provider as yfinance_provider
 from app.main import app
 from app.providers.yfinance_provider import _normalize_history_frame
 from app.schemas.common import SnapshotEnvelope
@@ -67,6 +68,42 @@ def test_refresh_fx_snapshot_writes_envelope(monkeypatch):
     assert envelope.record_count == 3
     assert envelope.data[0]["pair"] == "USDMYR"
     assert written_snapshots["fx/USDMYR"].record_count == 3
+
+
+def test_cnymyr_uses_derived_cross_rate_when_direct_yfinance_is_too_thin(monkeypatch):
+    dates = pd.date_range("2026-04-20", periods=3, freq="D").strftime("%Y-%m-%d")
+
+    def rows(close_values: list[float]) -> list[dict[str, float | str]]:
+        return [
+            {
+                "date": date,
+                "open": close,
+                "high": close,
+                "low": close,
+                "close": close,
+            }
+        for date, close in zip(dates, close_values, strict=False)
+        ]
+
+    def fake_fetch_history(self, ticker: str, *, period: str = "1y", interval: str = "1d"):
+        if ticker == "CNYMYR=X":
+            return rows([0.62])[:1]
+        if ticker == "MYR=X":
+            return rows([4.50, 4.55, 4.60])
+        if ticker == "CNY=X":
+            return rows([7.20, 7.25, 7.30])
+        raise AssertionError(f"Unexpected ticker {ticker}")
+
+    monkeypatch.setattr(
+        yfinance_provider.YFinanceMarketDataProvider,
+        "fetch_history",
+        fake_fetch_history,
+    )
+
+    frame = asyncio.run(yfinance_provider.fetch_fx_history("CNYMYR"))
+
+    assert len(frame) == 3
+    assert frame.iloc[-1]["close"] == pytest.approx(4.60 / 7.30)
 
 
 def test_refresh_energy_snapshot_writes_envelope(monkeypatch):

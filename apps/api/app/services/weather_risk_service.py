@@ -31,6 +31,7 @@ class WeatherRiskService:
         ports: list[dict[str, Any]] | None = None,
         *,
         allow_partial: bool = False,
+        keep_history: bool = False,
     ) -> SnapshotEnvelope:
         if not self.provider.api_key:
             raise ProviderError("OPENWEATHER_API_KEY is not configured.")
@@ -66,7 +67,7 @@ class WeatherRiskService:
                 data=all_records,
             )
         )
-        self.snapshot_repository.write_snapshot("weather", envelope)
+        self.snapshot_repository.write_snapshot("weather", envelope, keep_history=keep_history)
         logger.info("Weather snapshot written: %d port summaries", len(all_records))
         return envelope
 

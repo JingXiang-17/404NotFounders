@@ -93,17 +93,55 @@ class YFinanceMarketDataProvider:
 
 
 async def fetch_fx_history(pair: str, period: str = "1y") -> pd.DataFrame:
-    ticker = DEFAULT_FX_PAIR_TICKERS.get(pair.upper())
+    normalized_pair = pair.upper()
+    ticker = DEFAULT_FX_PAIR_TICKERS.get(normalized_pair)
     if not ticker:
         raise ExternalFetchFailed(f"Unsupported FX pair: {pair}")
 
     provider = YFinanceMarketDataProvider()
     try:
         records = await asyncio.to_thread(provider.fetch_history, ticker, period=period)
+        frame = pd.DataFrame(records, columns=["date", "open", "high", "low", "close"])
+        if normalized_pair != "CNYMYR" or len(frame) >= 30:
+            return frame
     except (ProviderError, DependencyNotAvailableError, NormalizationFailed) as exc:
-        raise ExternalFetchFailed(f"Failed to fetch {pair} from yfinance: {exc}") from exc
+        if normalized_pair != "CNYMYR":
+            raise ExternalFetchFailed(f"Failed to fetch {pair} from yfinance: {exc}") from exc
 
-    return pd.DataFrame(records, columns=["date", "open", "high", "low", "close"])
+    if normalized_pair == "CNYMYR":
+        try:
+            return await _fetch_derived_cnymyr_history(provider=provider, period=period)
+        except (ProviderError, DependencyNotAvailableError, NormalizationFailed) as exc:
+            raise ExternalFetchFailed(
+                f"Failed to derive CNYMYR from yfinance USDMYR and USDCNY history: {exc}"
+            ) from exc
+
+    return frame
+
+
+async def _fetch_derived_cnymyr_history(
+    *,
+    provider: YFinanceMarketDataProvider,
+    period: str,
+) -> pd.DataFrame:
+    usdmyr_records, usdcny_records = await asyncio.gather(
+        asyncio.to_thread(provider.fetch_history, "MYR=X", period=period),
+        asyncio.to_thread(provider.fetch_history, "CNY=X", period=period),
+    )
+    usdmyr = pd.DataFrame(usdmyr_records, columns=["date", "open", "high", "low", "close"])
+    usdcny = pd.DataFrame(usdcny_records, columns=["date", "open", "high", "low", "close"])
+    merged = usdmyr.merge(usdcny, on="date", suffixes=("_usdmyr", "_usdcny"))
+    if merged.empty:
+        raise NormalizationFailed("No overlapping dates between USDMYR and USDCNY yfinance histories.")
+
+    derived = pd.DataFrame({"date": merged["date"]})
+    for column in ("open", "high", "low", "close"):
+        derived[column] = merged[f"{column}_usdmyr"] / merged[f"{column}_usdcny"]
+
+    derived = derived.replace([float("inf"), float("-inf")], pd.NA).dropna()
+    if derived.empty:
+        raise NormalizationFailed("Derived CNYMYR history had no valid rows after cleaning.")
+    return derived.sort_values("date").reset_index(drop=True)
 
 
 async def fetch_energy_history(symbol: str = "BZ=F", period: str = "1y") -> pd.DataFrame:

@@ -855,12 +855,14 @@ def _build_hedge_rationale(
     scenario: HedgeScenarioResult | None,
 ) -> str:
     direction = _fan_chart_direction(scenario)
+    horizon_days = max(0, (scenario.horizon_days if scenario else 0) - 1)
+    horizon_label = f"{horizon_days}-day" if horizon_days > 0 else "forecast"
     if direction == "down":
-        timing_note = "The 30-day fan chart trends lower, so management may wait or requote if supply urgency permits."
+        timing_note = f"The {horizon_label} fan chart trends lower, so management may wait or requote if supply urgency permits."
     elif direction == "up":
-        timing_note = "The 30-day fan chart trends higher, so hedging now reduces the risk of landed-cost escalation."
+        timing_note = f"The {horizon_label} fan chart trends higher, so hedging now reduces the risk of landed-cost escalation."
     else:
-        timing_note = "The 30-day fan chart is broadly stable, so the hedge is sized to control tail risk rather than chase price direction."
+        timing_note = f"The {horizon_label} fan chart is broadly stable, so the hedge is sized to control tail risk rather than chase price direction."
 
     risk = run_payload.risk_driver_breakdown
     driver_note = ""

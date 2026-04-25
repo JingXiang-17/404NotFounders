@@ -14,7 +14,12 @@ class MacroDataService:
         self.provider = provider
         self.snapshot_repository = snapshot_repository
 
-    async def refresh_ipi_snapshot(self, *, allow_partial: bool = False) -> SnapshotEnvelope:
+    async def refresh_ipi_snapshot(
+        self,
+        *,
+        allow_partial: bool = False,
+        keep_history: bool = False,
+    ) -> SnapshotEnvelope:
         fetched_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         try:
             rows = await self.provider.fetch_dataset("ipi", limit=200)
@@ -32,10 +37,15 @@ class MacroDataService:
                 data=[record],
             )
         )
-        self.snapshot_repository.write_snapshot("macro", envelope)
+        self.snapshot_repository.write_snapshot("macro", envelope, keep_history=keep_history)
         return envelope
 
-    async def refresh_trade_snapshot(self, *, allow_partial: bool = False) -> SnapshotEnvelope:
+    async def refresh_trade_snapshot(
+        self,
+        *,
+        allow_partial: bool = False,
+        keep_history: bool = False,
+    ) -> SnapshotEnvelope:
         fetched_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         try:
             rows = await self.provider.fetch_dataset("trade_sitc_1d", limit=500)
@@ -53,7 +63,7 @@ class MacroDataService:
                 data=[record],
             )
         )
-        self.snapshot_repository.write_snapshot("macro_trade", envelope)
+        self.snapshot_repository.write_snapshot("macro_trade", envelope, keep_history=keep_history)
         return envelope
 
     def normalize_series(

@@ -246,7 +246,7 @@ class LandedCostMonteCarloService:
             hedge_ratio=round(hedge_ratio, 2),
             business_justification=(
                 "We request the bank to arrange a forward exchange contract for the stated procurement exposure. "
-                "The hedge is intended to reduce foreign-exchange volatility during the 30-day purchase window while "
+                f"The hedge is intended to reduce foreign-exchange volatility during the {tenor_days}-day purchase window while "
                 "preserving visibility of non-FX logistics, resin, weather, and policy risks."
             ),
             risk_rationale=risk_rationale,

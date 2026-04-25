@@ -22,7 +22,7 @@ COMPARISON_SYSTEM_PROMPT = """You are LintasNiaga's procurement analyst. You hav
 5. Add one caveat only if there is a material risk
 6. Explain why each non-winning supplier was not chosen (one sentence each)
 7. Provide a brief impact summary that says what happened, why it matters, and what the SME should do next.
-If the 30-day landed-cost Monte Carlo p50 path trends lower and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
+If the landed-cost Monte Carlo p50 path trends lower over the provided forecast horizon and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
 Treat PP resin as a market benchmark only, not a Monte Carlo price driver. Use resin_benchmark and market_price_risks to tell the SME whether each supplier quote is below market, fair, premium, or suspiciously high/low. If a quote is far below benchmark, warn about validity, quality/spec mismatch, hidden fees, or bait pricing instead of treating it as automatically good. Do not change deterministic rank purely because of the resin benchmark unless the bounded swap rule is justified by reliability, downside risk, MOQ lock-up, urgency mismatch, or disruption risk.
 Use the P90-P50 spread as the risk budget: if the SME can tolerate that RM downside amount, advice can be neutral/monitor; if not, recommend hedge, lock, or stage the order. Do not invent news; only mention news/events present in the provided context.
 Return ONLY a valid JSON object. Do not include markdown, prose, code fences, or thinking text. Match this schema:
@@ -48,7 +48,7 @@ Your job is to:
 5. Add one caveat only if there is a material risk
 6. Explain the main downside risk in one sentence
 7. Provide a brief impact summary that says what happened, why it matters, and what the SME should do next.
-If the 30-day landed-cost Monte Carlo p50 path trends lower and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
+If the landed-cost Monte Carlo p50 path trends lower over the provided forecast horizon and urgency allows, timing can be "wait" with a reason such as wait/requote/order later. If the path trends higher or P90 tail risk is high, prefer "lock_now" and a higher hedge ratio.
 Treat PP resin as a market benchmark only, not a Monte Carlo price driver. Use resin_benchmark and market_price_risks to explain whether the quoted material price is below market, fair, premium, or suspiciously high/low. If it is far below benchmark, tell the SME to verify grade/spec, quote validity, hidden charges, and supplier credibility instead of blindly accepting it.
 Use the P90-P50 spread as the risk budget: if the SME can tolerate that RM downside amount, advice can be neutral/monitor; if not, recommend hedge, lock, or stage the order. Do not invent news; only mention news/events present in the provided context.
 Return ONLY a valid JSON object. Do not include markdown, prose, code fences, or thinking text. Match this schema:

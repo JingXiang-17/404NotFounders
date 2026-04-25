@@ -146,6 +146,13 @@ export default function ResultsPage() {
         analysis.ranked_quotes.length
       : 0;
   const direction = chartDirection(activeScenario);
+  const forecastEndDay = Math.max(0, (activeScenario?.p50_envelope?.length ?? 0) - 1);
+  const forecastRangeLabel = forecastEndDay > 0 ? `D0 to D${forecastEndDay}` : "D0 to latest";
+  const forecastTitle = forecastEndDay > 0 ? `${forecastEndDay}-Day Landed Cost Forecast` : "Landed Cost Forecast";
+  const forecastSubtitle =
+    forecastEndDay > 0
+      ? `${forecastEndDay}-day landed-cost Monte Carlo across tariff, freight, FX, oil, weather, holidays, macro, news, and PP resin benchmark.`
+      : "Landed-cost Monte Carlo across tariff, freight, FX, oil, weather, holidays, macro, news, and PP resin benchmark.";
   const decisionGridClass = "grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]";
   const latestNewsEvents = analysis?.top_news_events?.length
     ? analysis.top_news_events
@@ -156,7 +163,7 @@ export default function ResultsPage() {
     <AnalysisShell
       currentStep="decision"
       title="Decision workspace"
-      subtitle="30-day landed-cost Monte Carlo across tariff, freight, FX, oil, weather, holidays, macro, news, and PP resin benchmark."
+      subtitle={forecastSubtitle}
       actions={
         analysis?.recommendation ? (
           <div className="rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
@@ -183,7 +190,7 @@ export default function ResultsPage() {
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                30-Day Landed Cost Forecast
+                {forecastTitle}
               </h2>
               <p className="mt-1 text-xs text-secondary-text">
                 Deterministic 2,000-path simulation. Hedge changes reuse the same shocks, so the chart narrows without rerolling.
@@ -191,7 +198,7 @@ export default function ResultsPage() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                D0 to D30
+                {forecastRangeLabel}
               </div>
               <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-secondary-text">
                 <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[rgba(0,245,212,0.8)]"></span> P10 (Optimistic)</span>
@@ -440,7 +447,7 @@ function buildRiskRows(
       label: "Holidays",
       score: risk.holidays,
       evidence: notes.holidays || "",
-      effect: "Holiday closures raise lead-time risk during the 30-day window, so the model adds a delay-cost tail rather than changing the supplier base price.",
+      effect: "Holiday closures raise lead-time risk during the forecast window, so the model adds a delay-cost tail rather than changing the supplier base price.",
       news: filterNews(news, ["holiday", "closure", "festival"]),
     },
     {
